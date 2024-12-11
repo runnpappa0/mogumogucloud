@@ -1,0 +1,212 @@
+<?php
+session_start();
+require_once '../db.php';
+
+header('Content-Type: application/json');
+
+// 管理者チェック
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== '管理者') {
+    echo json_encode(['success' => false, 'message' => '認証されていません。']);
+    exit;
+}
+
+$method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? '';
+
+try {
+    $db = getDbConnection();
+
+    if ($method === 'GET') {
+        if ($action === 'fetch_order_counts') {
+            // 配達先別の必要発注数を取得
+            $query = "
+                SELECT 
+                    delivery_place,
+                    bento_type,
+                    rice_amount,
+                    COUNT(*) AS count
+                FROM bento_orders
+                WHERE order_date = CURDATE()
+                GROUP BY delivery_place, bento_type, rice_amount
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute();
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // データ初期化
+            $data = [
+                'facility_inside' => [],
+                'facility_outside' => [],
+                'frozen' => ['facility_inside' => 0, 'facility_outside' => 0],
+            ];
+
+            foreach ($result as $row) {
+                $isFrozen = $row['bento_type'] === '冷凍';
+
+                // 配達先に基づく分類
+                $placeKey = $row['delivery_place'] === '施設内' ? 'facility_inside' : 'facility_outside';
+
+                if ($isFrozen) {
+                    $data['frozen'][$placeKey] += $row['count'];
+                } else {
+                    if (!isset($data[$placeKey][$row['bento_type']])) {
+                        $data[$placeKey][$row['bento_type']] = [];
+                    }
+                    $data[$placeKey][$row['bento_type']][$row['rice_amount']] = $row['count'];
+                }
+            }
+
+            echo json_encode(['success' => true, 'data' => $data]);
+        } elseif ($action === 'fetch_orders') {
+            // 注文内訳を取得
+            $query = "
+                SELECT 
+                    bo.id AS order_id,
+                    u.name AS user_name,
+                    bo.bento_type,
+                    bo.rice_amount,
+                    bo.delivery_place,
+                    bo.status
+                FROM bento_orders AS bo
+                JOIN users AS u ON bo.user_id = u.id
+                WHERE bo.order_date = CURDATE()
+                ORDER BY 
+                    CASE u.role 
+                        WHEN '利用者' THEN 1
+                        WHEN 'スタッフ' THEN 2 
+                        ELSE 3 
+                    END,
+                    CASE bo.delivery_place 
+                        WHEN '施設内' THEN 1 
+                        WHEN '施設外' THEN 2 
+                        ELSE 3 
+                    END,
+                    CASE bo.bento_type
+                        WHEN 'Aランチ' THEN 1
+                        WHEN 'Bランチ' THEN 2
+                        WHEN '冷凍' THEN 3
+                    END,
+                    CASE bo.rice_amount
+                        WHEN '大盛' THEN 1
+                        WHEN '普通盛' THEN 2
+                        WHEN '半ライス' THEN 3
+                        WHEN 'おかずのみ' THEN 4
+                        ELSE 5
+                    END,
+                    u.name ASC
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute();
+            $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'orders' => $orders]);
+        } elseif ($action === 'fetch_users') {
+            // ユーザーリストを取得
+            $query = "
+                SELECT id, name
+                FROM users
+                WHERE role != '管理者'
+                ORDER BY 
+                    FIELD(role, '利用者', 'スタッフ'),
+                    name ASC
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            echo json_encode(['success' => true, 'users' => $users]);
+        } elseif ($action === 'fetch_order_details') {
+            // 特定注文の詳細を取得
+            $orderId = $_GET['order_id'] ?? null;
+            if (!$orderId) {
+                echo json_encode(['success' => false, 'message' => '注文IDが指定されていません。']);
+                exit;
+            }
+
+            $query = "
+                SELECT 
+                    bento_type,
+                    rice_amount,
+                    delivery_place
+                FROM bento_orders
+                WHERE id = :order_id
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute([':order_id' => $orderId]);
+            $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$order) {
+                echo json_encode(['success' => false, 'message' => '指定された注文が見つかりません。']);
+                exit;
+            }
+
+            echo json_encode(['success' => true, 'order' => $order]);
+        }
+    } elseif ($method === 'POST') {
+        if ($action === 'add_order') {
+            // 注文を追加
+            $input = json_decode(file_get_contents('php://input'), true);
+
+            if (empty($input['user_id']) || empty($input['bento_type']) || empty($input['delivery_place'])) {
+                echo json_encode(['success' => false, 'message' => '必要なデータが不足しています。']);
+                exit;
+            }
+
+            $query = "
+                INSERT INTO bento_orders (user_id, bento_type, rice_amount, delivery_place, order_date)
+                VALUES (:user_id, :bento_type, :rice_amount, :delivery_place, CURDATE())
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                ':user_id' => $input['user_id'],
+                ':bento_type' => $input['bento_type'],
+                ':rice_amount' => $input['rice_amount'] ?? null,
+                ':delivery_place' => $input['delivery_place']
+            ]);
+
+            echo json_encode(['success' => true, 'message' => '注文を新規作成しました。']);
+        } elseif ($action === 'update_order') {
+            // 注文を更新
+            $input = json_decode(file_get_contents('php://input'), true);
+
+            if (empty($input['order_id']) || empty($input['bento_type']) || empty($input['delivery_place'])) {
+                echo json_encode(['success' => false, 'message' => '必要なデータが不足しています。']);
+                exit;
+            }
+
+            $query = "
+                UPDATE bento_orders
+                SET bento_type = :bento_type, rice_amount = :rice_amount, delivery_place = :delivery_place
+                WHERE id = :order_id
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                ':bento_type' => $input['bento_type'],
+                ':rice_amount' => $input['rice_amount'] ?? null,
+                ':delivery_place' => $input['delivery_place'],
+                ':order_id' => $input['order_id']
+            ]);
+
+            echo json_encode(['success' => true, 'message' => '注文を更新しました。']);
+        }
+    } elseif ($method === 'DELETE') {
+        if ($action === 'delete_order') {
+            // 注文を削除
+            $orderId = $_GET['order_id'] ?? null;
+            if (!$orderId) {
+                echo json_encode(['success' => false, 'message' => '注文IDが必要です。']);
+                exit;
+            }
+
+            $query = "DELETE FROM bento_orders WHERE id = :order_id";
+            $stmt = $db->prepare($query);
+            $stmt->execute([':order_id' => $orderId]);
+
+            echo json_encode(['success' => true, 'message' => '注文を削除しました。']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'message' => '不正なリクエストです。']);
+    }
+} catch (PDOException $e) {
+    echo json_encode(['success' => false, 'message' => 'エラーが発生しました: ' . $e->getMessage()]);
+}

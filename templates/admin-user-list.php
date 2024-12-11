@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obento System - 利用者管理</title>
+    <link rel="stylesheet" href="/public/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body>
+    <!-- ヘッダー -->
+    <div id="header"></div>
+
+    <!-- メインコンテンツ -->
+    <div class="container mt-4">
+        <h1 class="mb-4">利用者管理</h1>
+
+        <!-- 検索フォーム -->
+        <div class="mb-4">
+            <label for="searchInput" class="form-label">検索</label>
+            <input type="text" class="form-control" id="searchInput" placeholder="名前で検索">
+        </div>
+
+        <!-- 利用者一覧テーブル -->
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>ユーザーネーム</th>
+                    <th>名前</th>
+                    <th>お弁当が必要な曜日</th>
+                    <th>お弁当タイプ</th>
+                    <th>ライスの量</th>
+                    <th>特記事項</th>
+                    <th>区分</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="userList">
+                <tr>
+                    <td colspan="9">データを読み込んでいます...</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 利用者追加ボタン -->
+        <div class="text-end">
+            <a href="admin-user-add.php" class="btn btn-primary">ユーザーを追加</a>
+        </div>
+    </div>
+
+    <!-- 編集モーダル -->
+    <div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editUserModalLabel">利用者の編集</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="閉じる"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <!-- 隠しフィールド -->
+                        <input type="hidden" id="editUserId">
+
+                        <div class="mb-3">
+                            <label for="editUsername" class="form-label">ユーザーネーム</label>
+                            <input type="text" class="form-control" id="editUsername" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editPassword" class="form-label">パスワード</label>
+                            <div class="input-group">
+                                <input type="password" class="form-control" id="editPassword">
+                                <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility()">表示</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editName" class="form-label">名前</label>
+                            <input type="text" class="form-control" id="editName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDays" class="form-label">お弁当が必要な曜日</label>
+                            <div id="editDays">
+                                <input class="form-check-input" type="checkbox" id="monday" value="月">
+                                <label class="form-check-label" for="monday">月</label>
+                                <br>
+                                <input class="form-check-input" type="checkbox" id="tuesday" value="火">
+                                <label class="form-check-label" for="tuesday">火</label>
+                                <br>
+                                <input class="form-check-input" type="checkbox" id="wednesday" value="水">
+                                <label class="form-check-label" for="wednesday">水</label>
+                                <br>
+                                <input class="form-check-input" type="checkbox" id="thursday" value="木">
+                                <label class="form-check-label" for="thursday">木</label>
+                                <br>
+                                <input class="form-check-input" type="checkbox" id="friday" value="金">
+                                <label class="form-check-label" for="friday">金</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editBentoType" class="form-label">お弁当タイプ</label>
+                            <select id="editBentoType" class="form-select">
+                                <option value="Aランチ">Aランチ</option>
+                                <option value="Bランチ">Bランチ</option>
+                                <option value="冷凍">冷凍</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editRiceAmount" class="form-label">ライスの量</label>
+                            <select id="editRiceAmount" class="form-select">
+                                <option value="大盛">大盛</option>
+                                <option value="普通盛">普通盛</option>
+                                <option value="半ライス">半ライス</option>
+                                <option value="おかずのみ">おかずのみ</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editNotes" class="form-label">特記事項</label>
+                            <textarea id="editNotes" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editRole" class="form-label">区分</label>
+                            <select id="editRole" class="form-select">
+                                <option value="利用者">利用者</option>
+                                <option value="スタッフ">スタッフ</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                    <button type="button" class="btn btn-primary" onclick="saveUserData()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- フッター -->
+    <div id="footer"></div>
+
+    <script>
+    // ヘッダーとフッターを読み込む
+    async function loadLayout() {
+    document.getElementById("header").innerHTML = await fetch(
+        "/templates/layouts/admin-header.php").then(res => res.text());
+    document.getElementById("footer").innerHTML = await fetch(
+        "/templates/layouts/admin-footer.php").then(res => res.text());
+    }
+
+    // ユーザー一覧を取得
+    async function fetchUserList() {
+    	const tbody = document.getElementById('userList');
+    	tbody.innerHTML = '<tr><td colspan="9">データを読み込んでいます...</td></tr>';
+
+    	try {
+    		const response = await fetch('/php/api/admin-user-list.php');
+    		const data = await response.json();
+
+    		if (!data.success || !data.users) {
+    			throw new Error(data.message || '利用者データが取得できませんでした。');
+    		}
+
+    		tbody.innerHTML = '';
+    		data.users.forEach((user, index) => {
+    			const weekdays = user.weekdays ? user.weekdays.split(',').join('・') :
+    				'';
+    			const bentoType = user.bento_type || '';
+    			const riceAmount = user.rice_amount || '';
+    			const notes = user.contract_notes || '';
+
+    			const row =
+    				`
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${user.username}</td>
+                        <td>${user.name}</td>
+                        <td>${weekdays}</td>
+                        <td>${bentoType}</td>
+                        <td>${riceAmount}</td>
+                        <td>${notes}</td>
+                        <td>${user.role}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" onclick="loadUserData(${user.id})">編集</button>
+                            <button class="btn btn-sm btn-danger" onclick="confirmDelete(${user.id}, '${user.username}')">削除</button>
+                        </td>
+                    </tr>
+                `;
+    			tbody.innerHTML += row;
+    		});
+    	} catch (error) {
+    		console.error('利用者一覧取得中にエラーが発生しました:', error);
+    		tbody.innerHTML = `<tr><td colspan="9">エラー: ${error.message}</td></tr>`;
+    	}
+    }
+
+    // 名前検索
+    document.getElementById('searchInput').addEventListener('input', (event) => {
+    	const query = event.target.value.toLowerCase();
+    	const rows = document.querySelectorAll('#userList tr');
+    	rows.forEach(row => {
+    		const nameCell = row.querySelector('td:nth-child(3)');
+    		if (nameCell && nameCell.textContent.toLowerCase().includes(query)) {
+    			row.style.display = '';
+    		} else {
+    			row.style.display = 'none';
+    		}
+    	});
+    });
+
+    function togglePasswordVisibility() {
+    	const passwordInput = document.getElementById('editPassword');
+    	if (passwordInput.type === 'password') {
+    		passwordInput.type = 'text';
+    	} else {
+    		passwordInput.type = 'password';
+    	}
+    }
+
+    // ユーザー情報を編集モーダルに反映
+    async function loadUserData(userId) {
+        try {
+            const response = await fetch(`/php/api/admin-user-list.php?id=${userId}`);
+            const data = await response.json();
+
+            if (!data.success || !data.user) {
+                throw new Error(data.message || '利用者データが取得できませんでした。');
+            }
+
+            const user = data.user;
+
+            // 修正：IDを隠しフィールドにセットし、ユーザーネームは別途表示
+            document.getElementById('editUserId').value = user.id; // 修正箇所
+            document.getElementById('editUsername').value = user.username; // 表示専用
+
+            document.getElementById('editName').value = user.name;
+            document.getElementById('editRole').value = user.role;
+
+            const weekdays = user.weekdays ? user.weekdays.split(',') : [];
+            document.querySelectorAll('#editDays input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = weekdays.includes(checkbox.value);
+            });
+
+            document.getElementById('editBentoType').value = user.bento_type || 'Aランチ';
+            document.getElementById('editRiceAmount').value = user.rice_amount || '';
+            document.getElementById('editNotes').value = user.contract_notes || '';
+        } catch (error) {
+            console.error('編集データ取得中にエラーが発生しました:', error);
+        }
+    }
+
+    // ユーザー情報を保存
+    async function saveUserData() {
+        const userId = document.getElementById('editUserId').value; // 修正箇所
+        const data = {
+            id: userId, // 正しい user_id を送信
+            password: document.getElementById('editPassword').value,
+            name: document.getElementById('editName').value,
+            weekdays: Array.from(document.querySelectorAll('#editDays input:checked'))
+                .map(cb => cb.value),
+            bento_type: document.getElementById('editBentoType').value,
+            rice_amount: document.getElementById('editRiceAmount').value,
+            notes: document.getElementById('editNotes').value,
+            role: document.getElementById('editRole').value
+        };
+
+        try {
+            const response = await fetch('/php/api/admin-user-list.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (result.success) {
+                alert('ユーザー情報が更新されました。');
+                fetchUserList(); // 更新後にリストをリロード
+                document.querySelector('#editUserModal .btn-close').click();
+            } else {
+                alert(result.message || 'ユーザー情報の更新に失敗しました。');
+            }
+        } catch (error) {
+            console.error('ユーザー情報更新中にエラーが発生しました:', error);
+        }
+    }
+
+    // ユーザー削除
+    async function confirmDelete(userId, username) {
+    	if (!confirm(`ユーザー ${username} を削除します。よろしいですか？`)) return;
+
+    	try {
+    		const response = await fetch(`/php/api/admin-user-list.php?id=${userId}`, {
+    			method: 'DELETE',
+    		});
+    		const data = await response.json();
+
+    		if (data.success) {
+    			alert(data.message);
+    			fetchUserList(); // 一覧を再取得
+    		} else {
+    			alert(data.message || '削除に失敗しました。');
+    		}
+    	} catch (error) {
+    		console.error('削除中にエラーが発生しました:', error);
+    		alert('削除中にエラーが発生しました。');
+    	}
+    }
+
+    // 初期ロード
+    document.addEventListener('DOMContentLoaded', () => {
+    	loadLayout();
+    	fetchUserList();
+    });
+    </script>
+</body>
+
+</html>
