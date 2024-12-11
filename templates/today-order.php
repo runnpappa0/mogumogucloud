@@ -66,8 +66,8 @@
             <div class="mb-3">
               <label for="newRiceAmount" class="form-label">ライスの量</label>
               <select id="newRiceAmount" class="form-select">
-                <option value="大盛">大盛</option>
-                <option value="普通盛" selected>普通盛</option>
+                <option value="大盛" selected>大盛</option>
+                <option value="普通盛">普通盛</option>
                 <option value="半ライス">半ライス</option>
                 <option value="おかずのみ">おかずのみ</option>
               </select>
@@ -104,7 +104,7 @@
     async function fetchTodayOrder() {
       try {
         const response = await fetch("/php/api/today-order.php", {
-          method: "GET"
+          method: "GET",
         });
         const data = await response.json();
 
@@ -112,6 +112,7 @@
         const noOrder = document.getElementById("noOrder");
 
         if (data.success) {
+          // 注文が存在する場合、編集フォームを表示
           const order = data.order;
           orderContent.innerHTML = `
         <form id="orderForm">
@@ -151,9 +152,12 @@
         </form>
       `;
           noOrder.style.display = "none";
+          orderContent.style.display = "block";
         } else {
+          // 注文が存在しない場合、新規追加を表示
           orderContent.innerHTML = "";
           noOrder.style.display = "block";
+          orderContent.style.display = "none";
         }
       } catch (error) {
         alert("エラーが発生しました。もう一度お試しください。");
@@ -177,7 +181,7 @@
         const response = await fetch("/php/api/today-order.php", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(orderData),
         });
@@ -187,6 +191,28 @@
         fetchTodayOrder();
       } catch (error) {
         alert("注文の変更に失敗しました。");
+      }
+    }
+
+    // 注文キャンセル
+    async function handleCancelOrder() {
+      try {
+        const response = await fetch("/php/api/today-order.php", {
+          method: "DELETE",
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          alert("注文をキャンセルしました。");
+          fetchTodayOrder();
+        } else {
+          alert(result.message || "キャンセルに失敗しました。");
+        }
+
+        const cancelModal = bootstrap.Modal.getInstance(document.getElementById("cancelModal"));
+        cancelModal.hide();
+      } catch (error) {
+        alert("キャンセル処理に失敗しました。");
       }
     }
 
@@ -200,13 +226,13 @@
         const orderData = {
           bento_type: bentoType,
           rice_amount: riceAmount,
-          delivery_place: deliveryPlace
+          delivery_place: deliveryPlace,
         };
 
         const response = await fetch("/php/api/today-order.php", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(orderData),
         });
@@ -214,7 +240,7 @@
         const result = await response.json();
 
         if (result.success) {
-          alert("新規注文が保存されました！");
+          alert("新規注文が保存されました。");
           document.getElementById("addOrderForm").reset();
           fetchTodayOrder();
 
@@ -233,17 +259,7 @@
       loadLayout();
       fetchTodayOrder();
 
-      document.getElementById("confirmCancel").addEventListener("click", async () => {
-        const response = await fetch("/php/api/today-order.php", {
-          method: "DELETE"
-        });
-        const result = await response.json();
-        alert(result.message);
-        const cancelModal = bootstrap.Modal.getInstance(document.getElementById("cancelModal"));
-        cancelModal.hide();
-        fetchTodayOrder();
-      });
-
+      document.getElementById("confirmCancel").addEventListener("click", handleCancelOrder);
       document.getElementById("saveNewOrder").addEventListener("click", handleAddOrder);
       document.getElementById("orderContent").addEventListener("submit", handleSubmitOrder);
     });
