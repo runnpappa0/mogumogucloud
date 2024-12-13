@@ -24,6 +24,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="admin-request-list.php">申請一覧</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="admin-request-list.php">メニュー登録</a>
+                </li>
             </ul>
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
