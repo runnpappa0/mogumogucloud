@@ -167,42 +167,44 @@
           // 注文が存在する場合、編集フォームを表示
           const order = data.order;
           orderContent.innerHTML = `
-            <form id="orderForm">
-              <div class="mb-3">
+        <form id="orderForm">
+            <div class="mb-3">
                 <label for="bentoType" class="form-label">お弁当タイプ</label>
-                <select id="bentoType" name="bento_type" class="form-select">
-                  <option value="Aランチ" ${order.bento_type === "Aランチ" ? "selected" : ""}>Aランチ</option>
-                  <option value="Bランチ" ${order.bento_type === "Bランチ" ? "selected" : ""}>Bランチ</option>
+                <select id="bentoType" name="bento_type" class="form-select" data-current="${order.bento_type}">
+                    <option value="Aランチ" ${order.bento_type === "Aランチ" ? "selected" : ""}>Aランチ</option>
+                    <option value="Bランチ" ${order.bento_type === "Bランチ" ? "selected" : ""}>Bランチ</option>
                 </select>
-              </div>
-              <div class="mb-3">
+            </div>
+            <div class="mb-3">
                 <label for="riceAmount" class="form-label">ライスの量</label>
-                <select id="riceAmount" name="rice_amount" class="form-select">
-                  <option value="大盛" ${order.rice_amount === "大盛" ? "selected" : ""}>大盛</option>
-                  <option value="普通盛" ${order.rice_amount === "普通盛" ? "selected" : ""}>普通盛</option>
-                  <option value="半ライス" ${order.rice_amount === "半ライス" ? "selected" : ""}>半ライス</option>
-                  <option value="おかずのみ" ${order.rice_amount === "おかずのみ" ? "selected" : ""}>おかずのみ</option>
+                <select id="riceAmount" name="rice_amount" class="form-select" data-current="${order.rice_amount}">
+                    <option value="大盛" ${order.rice_amount === "大盛" ? "selected" : ""}>大盛</option>
+                    <option value="普通盛" ${order.rice_amount === "普通盛" ? "selected" : ""}>普通盛</option>
+                    <option value="半ライス" ${order.rice_amount === "半ライス" ? "selected" : ""}>半ライス</option>
+                    <option value="おかずのみ" ${order.rice_amount === "おかずのみ" ? "selected" : ""}>おかずのみ</option>
                 </select>
-              </div>
-              <fieldset class="mb-3">
+            </div>
+            <fieldset class="mb-3">
                 <legend class="form-label">配達先</legend>
                 <div class="d-flex gap-3">
-                  <div>
-                    <input type="radio" id="deliveryInside" name="delivery_place" value="施設内" ${order.delivery_place === "施設内" ? "checked" : ""}>
-                    <label for="deliveryInside">施設内</label>
-                  </div>
-                  <div>
-                    <input type="radio" id="deliveryOutside" name="delivery_place" value="施設外" ${order.delivery_place === "施設外" ? "checked" : ""}>
-                    <label for="deliveryOutside">施設外</label>
-                  </div>
+                    <div>
+                        <input type="radio" id="deliveryInside" name="delivery_place" value="施設内" 
+                               ${order.delivery_place === "施設内" ? "checked data-current=\"true\"" : ""}>
+                        <label for="deliveryInside">施設内</label>
+                    </div>
+                    <div>
+                        <input type="radio" id="deliveryOutside" name="delivery_place" value="施設外"
+                               ${order.delivery_place === "施設外" ? "checked data-current=\"true\"" : ""}>
+                        <label for="deliveryOutside">施設外</label>
+                    </div>
                 </div>
-              </fieldset>
-              <div class="d-flex gap-2">
+            </fieldset>
+            <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">変更</button>
                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">注文をキャンセル</button>
-              </div>
-            </form>
-          `;
+            </div>
+        </form>
+    `;
           noOrder.style.display = "none";
           orderContent.style.display = "block";
         } else {
@@ -224,6 +226,19 @@
         const riceAmount = document.getElementById("riceAmount").value;
         const deliveryPlace = document.querySelector('input[name="delivery_place"]:checked').value;
 
+        // 現在の注文内容と比較
+        const currentOrder = {
+          bento_type: document.getElementById("bentoType").getAttribute("data-current"),
+          rice_amount: document.getElementById("riceAmount").getAttribute("data-current"),
+          delivery_place: document.querySelector('input[name="delivery_place"][data-current="true"]').value
+        };
+
+        // 変更があるかチェック
+        if (bentoType === currentOrder.bento_type &&
+          riceAmount === currentOrder.rice_amount &&
+          deliveryPlace === currentOrder.delivery_place) {
+          return;
+        }
         const orderData = {
           bento_type: bentoType,
           rice_amount: riceAmount,

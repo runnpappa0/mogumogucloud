@@ -151,6 +151,17 @@ try {
             $existingOrder = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($existingOrder) {
+                // 変更有無をチェック
+                if (
+                    $bento_type === $existingOrder['bento_type'] &&
+                    $rice_amount === $existingOrder['rice_amount'] &&
+                    $delivery_place === $existingOrder['delivery_place']
+                ) {
+                    $db->rollBack();
+                    echo json_encode(['success' => true, 'message' => '注文を更新しました。']);
+                    exit;
+                }
+                
                 // 更新
                 $query = 'UPDATE bento_orders 
                           SET bento_type = :bento_type, rice_amount = :rice_amount, delivery_place = :delivery_place, updated_at = NOW()
