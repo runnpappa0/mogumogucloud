@@ -172,19 +172,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(data),
             });
 
-            const text = await response.text();
-
-            // 空レスポンスチェック
-            if (!text.trim()) {
-                throw new Error('サーバーからのレスポンスが空です。');
-            }
-
-            const result = JSON.parse(text);
+            const result = await response.json();
 
             if (result.success) {
                 alert('注文が追加されました。');
-                fetchOrderCounts(); // 配達先別発注数を再取得
-                fetchOrderDetails(); // 注文内訳を再取得
+                // 注文内訳と履歴を更新
+                fetchOrderCounts();
+                fetchOrderDetails();
+                fetchOrderChangeHistory(); // 追加：変更履歴を更新
+
                 const modalInstance = bootstrap.Modal.getInstance(document.getElementById('addOrderModal'));
                 modalInstance.hide();
             } else {
@@ -228,21 +224,14 @@ async function fetchOrderDetails() {
 
         // 各注文をテーブルに追加
         data.orders.forEach(order => {
-            let statusBadge = '';
-            if (order.status === '消費済み') {
-                statusBadge = '<span class="badge bg-success">消費済み</span>';
-            } else if (order.status === 'ロス') {
-                statusBadge = '<span class="badge bg-warning">ロス</span>';
-            }
-
             orderTableBody.innerHTML += `
             <tr>
                 <td><input type="checkbox" class="orderCheckbox" data-order-id="${order.order_id}"></td>
                 <td>${order.user_name}</td>
                 <td>${order.bento_type}</td>
-                <td>${order.rice_amount || 'なし'}</td>
+                <td>${order.rice_amount || '-'}</td>
                 <td>${order.delivery_place}</td>
-                <td>${statusBadge}</td>
+                <td class="status-cell">${order.status ? `<span class="badge ${order.status === '消費済み' ? 'bg-success' : 'bg-warning'}">${order.status}</span>` : ''}</td>
                 <td>
                     <button class="btn btn-sm btn-primary edit-order-btn" data-order-id="${order.order_id}">編集</button>
                     <button class="btn btn-sm btn-danger cancel-order-btn" data-order-id="${order.order_id}">キャンセル</button>
@@ -355,8 +344,9 @@ async function saveOrderChanges() {
 
         if (result.success) {
             alert('注文が更新されました。');
-            fetchOrderCounts(); // 発注数を更新
-            fetchOrderDetails(); // 注文内訳を更新
+            fetchOrderCounts();
+            fetchOrderDetails();
+            fetchOrderChangeHistory(); // 追加：変更履歴を更新
 
             const editModal = bootstrap.Modal.getInstance(document.getElementById('editModal'));
             editModal.hide();
@@ -378,27 +368,16 @@ async function cancelOrder(orderId) {
             method: 'DELETE',
         });
 
-        // 成功時の204対応
-        if (response.status === 204) {
+        // レスポンス処理
+        const result = response.status === 204 ? { success: true } : await response.json();
+
+        if (result.success) {
             alert('キャンセルが完了しました。');
-            fetchOrderCounts(); // 配達先別発注数を再取得
-            fetchOrderDetails(); // 注文内訳を再取得
-            return;
-        }
-
-        const text = await response.text();
-        if (!text) {
-            throw new Error('サーバーからの応答が空です。');
-        }
-
-        const data = JSON.parse(text);
-
-        if (data.success) {
-            alert('キャンセルが完了しました。');
-            fetchOrderCounts(); // 配達先別発注数を再取得
-            fetchOrderDetails(); // 注文内訳を再取得
+            fetchOrderCounts();
+            fetchOrderDetails();
+            fetchOrderChangeHistory(); // 追加：変更履歴を更新
         } else {
-            throw new Error(data.message || '注文のキャンセルに失敗しました。');
+            throw new Error(result.message || '注文のキャンセルに失敗しました。');
         }
     } catch (error) {
         console.error('注文キャンセル中にエラーが発生しました:', error);
@@ -414,7 +393,7 @@ document.addEventListener('click', event => {
     }
 });
 
-// "消費済み"への状態変更
+// 消費済みへの状態変更
 document.querySelector(".update-status-btn[data-status='消費済み']").addEventListener("click", async () => {
     const selectedOrders = document.querySelectorAll(".orderCheckbox:checked");
     if (selectedOrders.length === 0) {
@@ -424,7 +403,7 @@ document.querySelector(".update-status-btn[data-status='消費済み']").addEven
 
     const orders = Array.from(selectedOrders).map(order => ({
         order_id: order.dataset.orderId,
-        status: "消費済み" // "消費済み"の場合、理由や備考は不要
+        status: "消費済み"
     }));
 
     try {
@@ -439,11 +418,10 @@ document.querySelector(".update-status-btn[data-status='消費済み']").addEven
             // 更新成功: UIを更新
             selectedOrders.forEach(order => {
                 const row = order.closest("tr");
-                const statusCell = row.querySelector("td:nth-child(6) span");
+                const statusCell = row.querySelector(".status-cell");
 
                 if (statusCell) {
-                    statusCell.className = "badge bg-success";
-                    statusCell.innerText = "消費済み";
+                    statusCell.innerHTML = '<span class="badge bg-success">消費済み</span>';
                 }
             });
         } else {
@@ -552,6 +530,57 @@ async function saveLossReasons() {
     }
 }
 
+// 変更内容のフォーマット関数
+function formatChangeDetail(action, detail) {
+    try {
+        const changeDetail = JSON.parse(detail);
+
+        switch (action) {
+            case '新規追加':
+                const newOrderDetail = [];
+                newOrderDetail.push(changeDetail.bento_type);
+                if (changeDetail.bento_type !== '冷凍') {
+                    newOrderDetail.push(changeDetail.rice_amount);
+                }
+                newOrderDetail.push(changeDetail.delivery_place);
+                return `注文を追加しました。（${newOrderDetail.join('、')}）`;
+
+            case '更新':
+                const changes = [];
+                // 値が実際に変更された項目のみを追加
+                if (changeDetail.bento_type &&
+                    changeDetail.bento_type.before !== changeDetail.bento_type.after) {
+                    changes.push(`${changeDetail.bento_type.before}→${changeDetail.bento_type.after}`);
+                }
+                if (changeDetail.rice_amount &&
+                    changeDetail.bento_type.after !== '冷凍' &&
+                    changeDetail.rice_amount.before !== changeDetail.rice_amount.after) {
+                    changes.push(`${changeDetail.rice_amount.before}→${changeDetail.rice_amount.after}`);
+                }
+                if (changeDetail.delivery_place &&
+                    changeDetail.delivery_place.before !== changeDetail.delivery_place.after) {
+                    changes.push(`${changeDetail.delivery_place.before}→${changeDetail.delivery_place.after}`);
+                }
+                return `注文を変更しました。（${changes.join('、')}）`;
+
+            case 'キャンセル':
+                const cancelDetail = [];
+                cancelDetail.push(changeDetail.bento_type);
+                if (changeDetail.bento_type !== '冷凍') {
+                    cancelDetail.push(changeDetail.rice_amount);
+                }
+                cancelDetail.push(changeDetail.delivery_place);
+                return `注文をキャンセルしました。（${cancelDetail.join('、')}）`;
+
+            default:
+                return '不明な変更';
+        }
+    } catch (e) {
+        console.error('変更内容のパース中にエラーが発生しました:', e);
+        return detail;
+    }
+}
+
 // 当日の注文変更履歴を取得して表示
 async function fetchOrderChangeHistory() {
     try {
@@ -581,9 +610,10 @@ async function fetchOrderChangeHistory() {
             const row = `
                 <tr>
                     <td>${index + 1}</td>
-                    <td>${change.changer_id} (${change.changer_role})</td>
+                    <td>${change.user_name}</td>
+                    <td>${change.changer_name} </td>
                     <td>${change.action}</td>
-                    <td>${change.change_detail}</td>
+                    <td>${formatChangeDetail(change.action, change.change_detail)}</td>
                     <td>${change.change_time}</td>
                 </tr>
             `;
@@ -592,34 +622,6 @@ async function fetchOrderChangeHistory() {
     } catch (error) {
         console.error('注文変更履歴取得中にエラーが発生しました:', error);
         alert(error.message || '注文変更履歴の取得に失敗しました。');
-    }
-}
-
-// 変更を処理する関数（注文の追加・更新・キャンセル）
-async function processOrderChanges(changes) {
-    try {
-        const response = await fetch('/php/api/process_order_changes.php?action=process_changes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ changes }),
-        });
-
-        if (!response.ok) {
-            throw new Error('サーバーエラーが発生しました。');
-        }
-
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.message || '注文の変更処理に失敗しました。');
-        }
-
-        alert('注文の変更が成功しました！');
-        fetchOrderChangeHistory(); // 履歴を更新
-        fetchOrderDetails(); // 注文内訳を更新
-    } catch (error) {
-        console.error('注文変更中にエラーが発生しました:', error);
-        alert(error.message || '注文変更に失敗しました。');
     }
 }
 

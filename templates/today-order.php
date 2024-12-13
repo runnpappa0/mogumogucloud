@@ -17,13 +17,18 @@
   <!-- メインコンテンツ -->
   <div class="container mt-4">
     <h1 class="mb-4">今日の注文</h1>
+    
+    <!-- 変更可能回数表示エリア -->
+    <div id="changeLimit" class="alert alert-info mb-3" style="display: none;">
+    </div>
+
     <div id="orderContent">
       <!-- 注文情報をここに動的に挿入 -->
     </div>
 
     <div id="noOrder" class="text-center mt-4" style="display: none;">
       <p>本日の注文がありません。</p>
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">注文を追加</button>
+      <button id="addOrderBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">注文を追加</button>
     </div>
   </div>
 
@@ -100,6 +105,40 @@
       document.getElementById("footer").innerHTML = await fetch("/templates/layouts/footer.php").then(res => res.text());
     }
 
+    // 変更回数表示を更新する関数
+    function updateChangeLimitDisplay(remainingChanges) {
+      const changeLimitDiv = document.getElementById('changeLimit');
+      const orderForm = document.getElementById('orderForm');
+      const addOrderBtn = document.getElementById('addOrderBtn');
+      const saveNewOrderBtn = document.getElementById('saveNewOrder');
+      
+      // 変更回数表示の設定
+      changeLimitDiv.style.display = 'block';
+      
+      if (remainingChanges > 0) {
+        changeLimitDiv.className = 'alert alert-info mb-3';
+        changeLimitDiv.innerHTML = `本日の注文変更可能回数：${remainingChanges}/2`;
+        
+        // ボタン類の有効化
+        if (orderForm) {
+          orderForm.querySelectorAll('button').forEach(btn => btn.disabled = false);
+        }
+        if (addOrderBtn) addOrderBtn.disabled = false;
+        if (saveNewOrderBtn) saveNewOrderBtn.disabled = false;
+        
+      } else {
+        changeLimitDiv.className = 'alert alert-warning mb-3';
+        changeLimitDiv.innerHTML = '本日の注文変更可能回数を超えました。変更が必要な場合は、電話でご連絡ください。';
+        
+        // ボタン類の無効化
+        if (orderForm) {
+          orderForm.querySelectorAll('button').forEach(btn => btn.disabled = true);
+        }
+        if (addOrderBtn) addOrderBtn.disabled = true;
+        if (saveNewOrderBtn) saveNewOrderBtn.disabled = true;
+      }
+    }
+
     // 今日の注文を取得してフォームを描画
     async function fetchTodayOrder() {
       try {
@@ -111,46 +150,51 @@
         const orderContent = document.getElementById("orderContent");
         const noOrder = document.getElementById("noOrder");
 
+        // 変更回数表示を更新
+        if (data.remainingChanges !== undefined) {
+          updateChangeLimitDisplay(data.remainingChanges);
+        }
+
         if (data.success) {
           // 注文が存在する場合、編集フォームを表示
           const order = data.order;
           orderContent.innerHTML = `
-        <form id="orderForm">
-          <div class="mb-3">
-            <label for="bentoType" class="form-label">お弁当タイプ</label>
-            <select id="bentoType" name="bento_type" class="form-select">
-              <option value="Aランチ" ${order.bento_type === "Aランチ" ? "selected" : ""}>Aランチ</option>
-              <option value="Bランチ" ${order.bento_type === "Bランチ" ? "selected" : ""}>Bランチ</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="riceAmount" class="form-label">ライスの量</label>
-            <select id="riceAmount" name="rice_amount" class="form-select">
-              <option value="大盛" ${order.rice_amount === "大盛" ? "selected" : ""}>大盛</option>
-              <option value="普通盛" ${order.rice_amount === "普通盛" ? "selected" : ""}>普通盛</option>
-              <option value="半ライス" ${order.rice_amount === "半ライス" ? "selected" : ""}>半ライス</option>
-              <option value="おかずのみ" ${order.rice_amount === "おかずのみ" ? "selected" : ""}>おかずのみ</option>
-            </select>
-          </div>
-          <fieldset class="mb-3">
-            <legend class="form-label">配達先</legend>
-            <div class="d-flex gap-3">
-              <div>
-                <input type="radio" id="deliveryInside" name="delivery_place" value="施設内" ${order.delivery_place === "施設内" ? "checked" : ""}>
-                <label for="deliveryInside">施設内</label>
+            <form id="orderForm">
+              <div class="mb-3">
+                <label for="bentoType" class="form-label">お弁当タイプ</label>
+                <select id="bentoType" name="bento_type" class="form-select">
+                  <option value="Aランチ" ${order.bento_type === "Aランチ" ? "selected" : ""}>Aランチ</option>
+                  <option value="Bランチ" ${order.bento_type === "Bランチ" ? "selected" : ""}>Bランチ</option>
+                </select>
               </div>
-              <div>
-                <input type="radio" id="deliveryOutside" name="delivery_place" value="施設外" ${order.delivery_place === "施設外" ? "checked" : ""}>
-                <label for="deliveryOutside">施設外</label>
+              <div class="mb-3">
+                <label for="riceAmount" class="form-label">ライスの量</label>
+                <select id="riceAmount" name="rice_amount" class="form-select">
+                  <option value="大盛" ${order.rice_amount === "大盛" ? "selected" : ""}>大盛</option>
+                  <option value="普通盛" ${order.rice_amount === "普通盛" ? "selected" : ""}>普通盛</option>
+                  <option value="半ライス" ${order.rice_amount === "半ライス" ? "selected" : ""}>半ライス</option>
+                  <option value="おかずのみ" ${order.rice_amount === "おかずのみ" ? "selected" : ""}>おかずのみ</option>
+                </select>
               </div>
-            </div>
-          </fieldset>
-          <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">変更</button>
-            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">注文をキャンセル</button>
-          </div>
-        </form>
-      `;
+              <fieldset class="mb-3">
+                <legend class="form-label">配達先</legend>
+                <div class="d-flex gap-3">
+                  <div>
+                    <input type="radio" id="deliveryInside" name="delivery_place" value="施設内" ${order.delivery_place === "施設内" ? "checked" : ""}>
+                    <label for="deliveryInside">施設内</label>
+                  </div>
+                  <div>
+                    <input type="radio" id="deliveryOutside" name="delivery_place" value="施設外" ${order.delivery_place === "施設外" ? "checked" : ""}>
+                    <label for="deliveryOutside">施設外</label>
+                  </div>
+                </div>
+              </fieldset>
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">変更</button>
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">注文をキャンセル</button>
+              </div>
+            </form>
+          `;
           noOrder.style.display = "none";
           orderContent.style.display = "block";
         } else {
@@ -187,8 +231,12 @@
         });
 
         const result = await response.json();
-        alert(result.message);
-        fetchTodayOrder();
+        if (result.success) {
+          alert(result.message);
+          fetchTodayOrder(); // 画面を更新
+        } else {
+          alert(result.message || "注文の変更に失敗しました。");
+        }
       } catch (error) {
         alert("注文の変更に失敗しました。");
       }
@@ -204,7 +252,7 @@
 
         if (result.success) {
           alert("注文をキャンセルしました。");
-          fetchTodayOrder();
+          fetchTodayOrder(); // 画面を更新
         } else {
           alert(result.message || "キャンセルに失敗しました。");
         }
@@ -242,7 +290,7 @@
         if (result.success) {
           alert("新規注文が保存されました。");
           document.getElementById("addOrderForm").reset();
-          fetchTodayOrder();
+          fetchTodayOrder(); // 画面を更新
 
           const addOrderModal = bootstrap.Modal.getInstance(document.getElementById("addOrderModal"));
           addOrderModal.hide();

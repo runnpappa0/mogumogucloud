@@ -279,7 +279,8 @@ error_reporting(E_ALL);
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>変更者 (役割)</th>
+                        <th>注文者</th>
+                        <th>変更者</th>
                         <th>アクション</th>
                         <th>変更内容</th>
                         <th>変更日時</th>

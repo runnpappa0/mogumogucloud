@@ -13,6 +13,25 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== '管理者') {
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
+// ヘルパー関数: 注文変更履歴を記録
+function logOrderChange($db, ?int $order_id, int $user_id, string $action, array $change_detail)
+{
+    $query = "
+        INSERT INTO order_change_logs 
+        (order_id, changer_id, user_id, action, change_detail)
+        VALUES (:order_id, :changer_id, :user_id, :action, :change_detail)
+    ";
+
+    $stmt = $db->prepare($query);
+    return $stmt->execute([
+        ':order_id' => $order_id,
+        ':changer_id' => $_SESSION['user_id'],  // 現在ログイン中の管理者ID
+        ':user_id' => $user_id,
+        ':action' => $action,
+        ':change_detail' => json_encode($change_detail, JSON_UNESCAPED_UNICODE)
+    ]);
+}
+
 try {
     $db = getDbConnection();
 
@@ -152,19 +171,38 @@ try {
                 exit;
             }
 
-            $query = "
-                INSERT INTO bento_orders (user_id, bento_type, rice_amount, delivery_place, order_date)
-                VALUES (:user_id, :bento_type, :rice_amount, :delivery_place, CURDATE())
-            ";
-            $stmt = $db->prepare($query);
-            $stmt->execute([
-                ':user_id' => $input['user_id'],
-                ':bento_type' => $input['bento_type'],
-                ':rice_amount' => $input['rice_amount'] ?? null,
-                ':delivery_place' => $input['delivery_place']
-            ]);
+            try {
+                $db->beginTransaction();
 
-            echo json_encode(['success' => true, 'message' => '注文を新規作成しました。']);
+                // 注文を追加
+                $query = "
+                    INSERT INTO bento_orders (user_id, bento_type, rice_amount, delivery_place, order_date)
+                    VALUES (:user_id, :bento_type, :rice_amount, :delivery_place, CURDATE())
+                ";
+                $stmt = $db->prepare($query);
+                $stmt->execute([
+                    ':user_id' => $input['user_id'],
+                    ':bento_type' => $input['bento_type'],
+                    ':rice_amount' => $input['rice_amount'] ?? null,
+                    ':delivery_place' => $input['delivery_place']
+                ]);
+
+                $orderId = $db->lastInsertId();
+
+                // 変更履歴を記録
+                $changeDetail = [
+                    'bento_type' => $input['bento_type'],
+                    'rice_amount' => $input['rice_amount'] ?? null,
+                    'delivery_place' => $input['delivery_place']
+                ];
+                logOrderChange($db, $orderId, $input['user_id'], '新規追加', $changeDetail);
+
+                $db->commit();
+                echo json_encode(['success' => true, 'message' => '注文を新規作成しました。']);
+            } catch (Exception $e) {
+                $db->rollBack();
+                echo json_encode(['success' => false, 'message' => 'エラーが発生しました：' . $e->getMessage()]);
+            }
         } elseif ($action === 'update_order') {
             // 注文を更新
             $input = json_decode(file_get_contents('php://input'), true);
@@ -174,20 +212,51 @@ try {
                 exit;
             }
 
-            $query = "
-                UPDATE bento_orders
-                SET bento_type = :bento_type, rice_amount = :rice_amount, delivery_place = :delivery_place
-                WHERE id = :order_id
-            ";
-            $stmt = $db->prepare($query);
-            $stmt->execute([
-                ':bento_type' => $input['bento_type'],
-                ':rice_amount' => $input['rice_amount'] ?? null,
-                ':delivery_place' => $input['delivery_place'],
-                ':order_id' => $input['order_id']
-            ]);
+            try {
+                $db->beginTransaction();
 
-            echo json_encode(['success' => true, 'message' => '注文を更新しました。']);
+                // 更新前の注文情報を取得
+                $stmt = $db->prepare("SELECT * FROM bento_orders WHERE id = ?");
+                $stmt->execute([$input['order_id']]);
+                $oldOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                // 注文を更新
+                $query = "
+                    UPDATE bento_orders
+                    SET bento_type = :bento_type, rice_amount = :rice_amount, delivery_place = :delivery_place
+                    WHERE id = :order_id
+                ";
+                $stmt = $db->prepare($query);
+                $stmt->execute([
+                    ':bento_type' => $input['bento_type'],
+                    ':rice_amount' => $input['rice_amount'] ?? null,
+                    ':delivery_place' => $input['delivery_place'],
+                    ':order_id' => $input['order_id']
+                ]);
+
+                // 変更履歴を記録
+                $changeDetail = [
+                    'bento_type' => [
+                        'before' => $oldOrder['bento_type'],
+                        'after' => $input['bento_type']
+                    ],
+                    'rice_amount' => [
+                        'before' => $oldOrder['rice_amount'],
+                        'after' => $input['rice_amount'] ?? null
+                    ],
+                    'delivery_place' => [
+                        'before' => $oldOrder['delivery_place'],
+                        'after' => $input['delivery_place']
+                    ]
+                ];
+                logOrderChange($db, $input['order_id'], $oldOrder['user_id'], '更新', $changeDetail);
+
+                $db->commit();
+                echo json_encode(['success' => true, 'message' => '注文を更新しました。']);
+            } catch (Exception $e) {
+                $db->rollBack();
+                echo json_encode(['success' => false, 'message' => 'エラーが発生しました：' . $e->getMessage()]);
+            }
         }
     } elseif ($method === 'DELETE') {
         if ($action === 'delete_order') {
@@ -198,11 +267,51 @@ try {
                 exit;
             }
 
-            $query = "DELETE FROM bento_orders WHERE id = :order_id";
-            $stmt = $db->prepare($query);
-            $stmt->execute([':order_id' => $orderId]);
+            try {
+                $db->beginTransaction();
 
-            echo json_encode(['success' => true, 'message' => '注文を削除しました。']);
+                // 削除前の注文情報を取得
+                $stmt = $db->prepare("SELECT * FROM bento_orders WHERE id = ?");
+                $stmt->execute([$orderId]);
+                $oldOrder = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$oldOrder) {
+                    throw new Exception('注文が見つかりません。');
+                }
+
+                // 変更履歴を記録（注文削除前に実行）
+                $changeDetail = [
+                    'bento_type' => $oldOrder['bento_type'],
+                    'rice_amount' => $oldOrder['rice_amount'],
+                    'delivery_place' => $oldOrder['delivery_place']
+                ];
+
+                // 変更履歴の記録
+                $logQuery = "
+                    INSERT INTO order_change_logs 
+                    (order_id, changer_id, user_id, action, change_detail)
+                    VALUES (:order_id, :changer_id, :user_id, :action, :change_detail)
+                ";
+                $logStmt = $db->prepare($logQuery);
+                $logStmt->execute([
+                    ':order_id' => $orderId,
+                    ':changer_id' => $_SESSION['user_id'], // セッションから管理者のIDを取得
+                    ':user_id' => $oldOrder['user_id'],
+                    ':action' => 'キャンセル',
+                    ':change_detail' => json_encode($changeDetail, JSON_UNESCAPED_UNICODE)
+                ]);
+
+                // 注文を削除
+                $deleteQuery = "DELETE FROM bento_orders WHERE id = :order_id";
+                $deleteStmt = $db->prepare($deleteQuery);
+                $deleteStmt->execute([':order_id' => $orderId]);
+
+                $db->commit();
+                echo json_encode(['success' => true, 'message' => '注文を削除しました。']);
+            } catch (Exception $e) {
+                $db->rollBack();
+                echo json_encode(['success' => false, 'message' => 'エラーが発生しました：' . $e->getMessage()]);
+            }
         }
     } else {
         echo json_encode(['success' => false, 'message' => '不正なリクエストです。']);

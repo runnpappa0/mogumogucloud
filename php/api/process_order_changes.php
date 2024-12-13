@@ -109,12 +109,11 @@ try {
 
             // 変更履歴を保存
             $stmt = $db->prepare("
-                INSERT INTO order_change_logs (changer_id, changer_role, order_id, action, change_detail)
-                VALUES (:changer_id, :changer_role, :order_id, :action, :change_detail)
+                INSERT INTO order_change_logs (changer_id, order_id, action, change_detail)
+                VALUES (:changer_id, :order_id, :action, :change_detail)
             ");
             $stmt->execute([
                 ':changer_id' => $_SESSION['user_id'],
-                ':changer_role' => $_SESSION['user_role'],
                 ':order_id' => $orderId,
                 ':action' => $action,
                 ':change_detail' => $changeDetail
@@ -132,13 +131,17 @@ try {
         $stmt = $db->prepare("
             SELECT 
                 ocl.changer_id,
-                ocl.changer_role,
+                c.name AS changer_name,
+                ocl.user_id,
+                u.name AS user_name,
                 ocl.action,
                 ocl.change_detail,
-                ocl.change_time
+                DATE_FORMAT(ocl.change_time, '%Y-%m-%d %H:%i') AS change_time
             FROM order_change_logs AS ocl
+            JOIN users AS c ON ocl.changer_id = c.id
+            JOIN users AS u ON ocl.user_id = u.id
             WHERE DATE(ocl.change_time) = CURDATE()
-            ORDER BY ocl.change_time ASC
+            ORDER BY ocl.change_time DESC
         ");
         $stmt->execute();
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
