@@ -17,7 +17,7 @@
   <!-- メインコンテンツ -->
   <div class="container mt-4">
     <h1 class="mb-4">今日の注文</h1>
-    
+
     <!-- 変更可能回数表示エリア -->
     <div id="changeLimit" class="alert alert-info mb-3" style="display: none;">
     </div>
@@ -94,6 +94,14 @@
     </div>
   </div>
 
+  <!-- メニューブロック -->
+  <div id="menuLinks" class="container mt-5" style="display: none;">
+    <h3 class="mb-4 h3 border-bottom pb-2">メニュー</h3>
+    <div class="row g-4" id="menuLinksContent">
+      <!-- 動的に生成される内容 -->
+    </div>
+  </div>
+
   <!-- フッターを挿入 -->
   <div id="footer"></div>
 
@@ -111,25 +119,25 @@
       const orderForm = document.getElementById('orderForm');
       const addOrderBtn = document.getElementById('addOrderBtn');
       const saveNewOrderBtn = document.getElementById('saveNewOrder');
-      
+
       // 変更回数表示の設定
       changeLimitDiv.style.display = 'block';
-      
+
       if (remainingChanges > 0) {
         changeLimitDiv.className = 'alert alert-info mb-3';
         changeLimitDiv.innerHTML = `本日の注文変更可能回数：${remainingChanges}/2`;
-        
+
         // ボタン類の有効化
         if (orderForm) {
           orderForm.querySelectorAll('button').forEach(btn => btn.disabled = false);
         }
         if (addOrderBtn) addOrderBtn.disabled = false;
         if (saveNewOrderBtn) saveNewOrderBtn.disabled = false;
-        
+
       } else {
         changeLimitDiv.className = 'alert alert-warning mb-3';
         changeLimitDiv.innerHTML = '本日の注文変更可能回数を超えました。変更が必要な場合は、電話でご連絡ください。';
-        
+
         // ボタン類の無効化
         if (orderForm) {
           orderForm.querySelectorAll('button').forEach(btn => btn.disabled = true);
@@ -302,10 +310,83 @@
       }
     }
 
+    // メニューリンクを取得して表示
+    async function fetchMenuLinks() {
+      try {
+        const response = await fetch('/php/api/admin-menu-add.php');
+        const data = await response.json();
+
+        if (!data.success || !data.links || data.links.length === 0) {
+          // メニューが存在しない場合はブロックを非表示
+          document.getElementById('menuLinks').style.display = 'none';
+          return;
+        }
+
+        // メニューブロックを表示
+        document.getElementById('menuLinks').style.display = 'block';
+        const content = document.getElementById('menuLinksContent');
+
+        // 月ごとにグループ化
+        const grouped = data.links.reduce((acc, link) => {
+          const month = new Date(link.target_month).toLocaleDateString('ja', {
+            year: 'numeric',
+            month: 'long'
+          });
+          if (!acc[month]) acc[month] = [];
+          acc[month].push(link);
+          return acc;
+        }, {});
+
+        // 内容を生成
+        content.innerHTML = Object.entries(grouped).map(([month, links]) => `
+                <div class="col-md-6">
+                    <h4 class="h5 mb-3">${month}</h4>
+                    <div class="d-flex flex-column gap-3">
+                        ${links.map(link => {
+                            // URLの拡張子をチェック
+                            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(link.link_url);
+                            
+                            if (isImage) {
+                                return `
+                                  <div>
+                                      <p class="mb-2">${link.bento_type}</p>
+                                      <a href="${link.link_url}" target="_blank" class="d-inline-block">
+                                          <img src="${link.link_url}" alt="${month} ${link.bento_type}のメニュー" 
+                                              class="img-fluid img-thumbnail">
+                                      </a>
+                                  </div>
+                                `;
+                            } else {
+                                return ` <
+          div >
+          <
+          a href = "${link.link_url}"
+          target = "_blank"
+          class = "text-decoration-none" >
+          $ {
+            link.bento_type
+          }
+          のメニューを表示 <
+          i class = "bi bi-box-arrow-up-right ms-1" > < /i> < /
+          a > <
+          /div>
+          `;
+                            }
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+      } catch (error) {
+        console.error('メニューリンクの取得に失敗:', error);
+      }
+    }
+
     // イベントリスナーの設定
     document.addEventListener("DOMContentLoaded", () => {
       loadLayout();
       fetchTodayOrder();
+      fetchMenuLinks();
 
       document.getElementById("confirmCancel").addEventListener("click", handleCancelOrder);
       document.getElementById("saveNewOrder").addEventListener("click", handleAddOrder);
