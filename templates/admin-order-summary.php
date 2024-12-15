@@ -123,6 +123,9 @@
                     const lossReason = order.status === 'ロス' ?
                         (order.loss_reason === 'その他' ? order.additional_notes : order.loss_reason) :
                         '';
+                    const badgeClass = order.status === '消費済み' ? 'bg-success' : (order.status === 'ロス' ? 'bg-warning' : '');
+                    const statusDisplay = order.status ? `<span class="badge ${badgeClass}">${order.status}</span>` : '';
+
                     const row = `
                         <tr>
                             <td>${index + 1}</td>
@@ -131,7 +134,7 @@
                             <td>${order.rice_amount || 'なし'}</td>
                             <td>${order.delivery_place}</td>
                             <td>${order.order_date}</td>
-                            <td><span class="badge ${order.status === '消費済み' ? 'bg-success' : 'bg-warning'}">${order.status}</span></td>
+                            <td>${statusDisplay}</td>
                             <td>${lossReason || ''}</td>
                         </tr>`;
                     tbody.innerHTML += row;
