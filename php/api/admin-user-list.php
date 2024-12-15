@@ -73,25 +73,29 @@ try {
             exit;
         }
 
-        // パスワードを保持または新しい値を適用
+        // パスワードのハッシュ化対応
         $password = $input['password'] ?? null;
-        if ($password === null) {
+        if ($password === null || $password === '') {
+            // パスワード未入力時は既存のハッシュ値を維持
             $passwordQuery = "SELECT password FROM users WHERE id = :id";
             $passwordStmt = $db->prepare($passwordQuery);
             $passwordStmt->execute([':id' => $input['id']]);
             $password = $passwordStmt->fetchColumn();
+        } else {
+            // 新しいパスワードが入力された場合はハッシュ化
+            $password = password_hash($password, PASSWORD_DEFAULT);
         }
 
         // usersテーブルの更新
         $userQuery = "
-            UPDATE users 
-            SET name = :name,
-                password = :password,
-                role = :role,
-                default_delivery_place = :default_delivery_place,
-                can_change_delivery = :can_change_delivery
-            WHERE id = :id
-        ";
+        UPDATE users 
+        SET name = :name,
+            password = :password,
+            role = :role,
+            default_delivery_place = :default_delivery_place,
+            can_change_delivery = :can_change_delivery
+        WHERE id = :id
+    ";
         $userStmt = $db->prepare($userQuery);
         $userStmt->execute([
             ':name' => $input['name'],

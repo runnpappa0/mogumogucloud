@@ -29,7 +29,7 @@ try {
     $user = $stmt->fetch();
 
     // パスワード検証
-    if (!$user || $password !== $user['password']) { // 平文で比較
+    if (!$user || !password_verify($password, $user['password'])) {
         echo json_encode(['success' => false, 'message' => 'ユーザー名またはパスワードが正しくありません。']);
         exit;
     }

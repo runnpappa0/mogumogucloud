@@ -30,11 +30,11 @@ try {
     $userStmt = $db->prepare($userQuery);
     $userStmt->execute([
         ':username' => $input['username'],
-        ':password' => $input['password'],
+        ':password' => password_hash($input['password'], PASSWORD_DEFAULT),
         ':name' => $input['name'],
         ':role' => $input['role'],
         ':default_delivery_place' => $input['default_delivery_place'],
-        ':can_change_delivery' => $input['can_change_delivery'] ? 1 : 0  // 追加
+        ':can_change_delivery' => $input['can_change_delivery']
     ]);
 
     $userId = $db->lastInsertId();
