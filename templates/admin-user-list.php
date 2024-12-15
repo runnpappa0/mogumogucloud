@@ -246,6 +246,7 @@
 
                 const user = data.user;
                 document.getElementById('editUserId').value = user.id;
+                document.getElementById('editUsername').value = user.username;
                 document.getElementById('editName').value = user.name;
                 document.getElementById('editRole').value = user.role;
 
