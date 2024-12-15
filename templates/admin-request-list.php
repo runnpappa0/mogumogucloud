@@ -16,7 +16,7 @@
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
-    <div class="container mt-4">
+    <div class="container mt-5 pt-5">
         <h1 class="mb-4">申請一覧</h1>
 
         <!-- 申請一覧テーブル -->

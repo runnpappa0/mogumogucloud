@@ -16,7 +16,7 @@
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
-    <div class="container mt-4">
+    <div class="container mt-5 pt-5">
         <h1 class="mb-4">ロス分析</h1>
 
         <!-- ロス金額情報 -->

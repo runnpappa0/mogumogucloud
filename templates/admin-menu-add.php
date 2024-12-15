@@ -16,7 +16,7 @@
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
-    <div class="container mt-4">
+    <div class="container mt-5 pt-5">
         <h2>メニュー登録</h2>
 
         <form id="menuLinkForm" class="mt-4">

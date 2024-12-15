@@ -23,7 +23,7 @@ error_reporting(E_ALL);
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
-    <div class="container mt-4">
+    <div class="container mt-5 pt-5">
         <h1 class="mb-4">管理者ダッシュボード</h1>
 
         <!-- 配達先別発注数 -->

@@ -15,8 +15,8 @@
   <div id="header"></div>
 
   <!-- メインコンテンツ -->
-  <div class="container mt-4">
-    <h1 class="mb-4">今日の注文</h1>
+  <div class="container mt-5 pt-5">
+    <h1 class="mb-3">今日の注文</h1>
 
     <!-- 変更可能回数表示エリア -->
     <div id="changeLimit" class="alert alert-info mb-3" style="display: none;">

@@ -16,7 +16,7 @@
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
-    <div class="container mt-4">
+    <div class="container mt-5 pt-5">
         <h1 class="mb-4">新規ユーザー追加</h1>
         <form id="addUserForm">
             <div class="mb-3">

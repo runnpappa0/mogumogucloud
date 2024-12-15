@@ -16,7 +16,7 @@
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
-    <div class="container mt-4">
+    <div class="container mt-5 pt-5">
         <h1 class="mb-4">注文履歴</h1>
 
         <!-- 検索フォーム -->
@@ -55,7 +55,7 @@
         </div>
 
         <!-- ページネーション -->
-        <nav>
+        <nav class="mb-4">
             <ul class="pagination justify-content-center" id="pagination">
                 <!-- ページ番号を動的に挿入 -->
             </ul>
@@ -64,7 +64,7 @@
         <!-- 注文金額 -->
         <div class="mt-4">
             <h5>注文金額</h5>
-            <table class="table table-bordered">
+            <table class="table table-bordered w-75">
                 <thead>
                     <tr>
                         <th>お弁当の種類</th>
