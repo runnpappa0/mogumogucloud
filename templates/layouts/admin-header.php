@@ -13,7 +13,7 @@
                     <a class="nav-link" href="admin-dashboard.php">ダッシュボード</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="admin-user-list.php">利用者管理</a>
+                    <a class="nav-link" href="admin-user-list.php">ユーザー管理</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="admin-order-summary.php">注文履歴</a>
