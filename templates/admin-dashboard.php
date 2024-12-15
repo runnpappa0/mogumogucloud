@@ -242,7 +242,7 @@ error_reporting(E_ALL);
         </div>
 
         <!-- 状態変更ボタン -->
-        <div class="text-end">
+        <div class="mb-5">
             <button class="btn btn-success update-status-btn" data-status="消費済み">選択した注文を消費済みに変更</button>
             <button class="btn btn-warning update-status-btn" data-status="ロス" data-bs-toggle="modal"
                 data-bs-target="#lossReasonModal">選択した注文をロスに変更</button>

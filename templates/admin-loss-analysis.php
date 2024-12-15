@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
+
 <body>
     <!-- ヘッダー -->
     <div id="header"></div>
@@ -34,7 +36,7 @@
         </div>
 
         <!-- 複合グラフ -->
-        <div class="mb-4" id="lossChartContainer">
+        <div class="mb-5" id="lossChartContainer">
             <h5 id="chartTitle">月別ロス比較</h5>
             <canvas id="lossChart"></canvas>
         </div>
@@ -42,7 +44,7 @@
         <!-- ロスユーザーリスト -->
         <div class="mb-4">
             <h5>ロスのある利用者リスト</h5>
-            <table class="table table-striped">
+            <table class="table table-striped w-75">
                 <thead>
                     <tr>
                         <th>利用者名</th>
@@ -51,7 +53,9 @@
                     </tr>
                 </thead>
                 <tbody id="lossUserList">
-                    <tr><td colspan="3">データを読み込んでいます...</td></tr>
+                    <tr>
+                        <td colspan="3">データを読み込んでいます...</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -174,20 +178,23 @@
                 type: 'bar',
                 data: {
                     labels,
-                    datasets: [
-                        {
+                    datasets: [{
                             type: 'line',
                             label: 'ロス数',
                             data: lossCounts,
-                            borderColor: 'blue',
+                            borderColor: 'rgba(77, 137, 245, 1)',
+                            pointBackgroundColor: 'rgba(77, 137, 245, 1)',
                             fill: false,
+                            tension: 0.5,
                             yAxisID: 'y',
                         },
                         {
                             type: 'bar',
                             label: 'ロス金額',
                             data: lossAmounts,
-                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                            backgroundColor: 'rgba(255, 182, 193, 0.5)',
+                            borderColor: 'rgba(255, 182, 193, 1)',
+                            borderWidth: 1,
                             yAxisID: 'y1',
                         },
                     ],
@@ -279,4 +286,5 @@
         });
     </script>
 </body>
+
 </html>
