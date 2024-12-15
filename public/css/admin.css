@@ -26,19 +26,12 @@ body {
   margin-right: 10px;
 }
 
-.orderTable {
+.orderTable,
+#frozenTable {
   table-layout: fixed;
-  width: 750px !important;
 }
 
 .orderTable th,
-.orderTable td,
-#frozenTable th,
-#frozenTable td {
-  width: 150px;
+.orderTable td {
   word-wrap: break-word;
-}
-
-#frozenTable {
-  width: 300px;
 }
