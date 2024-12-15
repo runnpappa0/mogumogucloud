@@ -8,6 +8,7 @@ if (!isset($_SESSION['user_id'])) {
 
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +17,7 @@ if (!isset($_SESSION['user_id'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="/public/css/style.css">
 </head>
+
 <body>
     <!-- ヘッダー -->
     <div id="header"></div>
@@ -98,13 +100,16 @@ if (!isset($_SESSION['user_id'])) {
                 const tbody = document.getElementById('orderHistory');
                 tbody.innerHTML = '';
                 data.orders.forEach(order => {
+                    const badgeClass = order.status === '消費済み' ? 'bg-success' : (order.status === 'ロス' ? 'bg-warning' : '');
+                    const statusDisplay = order.status ? `<span class="badge ${badgeClass}">${order.status}</span>` : '';
+
                     const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${order.order_date}</td>
                         <td>${order.bento_type}</td>
                         <td>${order.rice_amount || 'なし'}</td>
                         <td>${order.delivery_place}</td>
-                        <td><span class="badge ${order.status === '消費済み' ? 'bg-success' : 'bg-warning'}">${order.status}</span></td>
+                        <td>${statusDisplay}</td>
                     `;
                     tbody.appendChild(row);
                 });
@@ -152,4 +157,5 @@ if (!isset($_SESSION['user_id'])) {
         });
     </script>
 </body>
+
 </html>
