@@ -14,7 +14,7 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obento System - ログイン</title>
+    <title>Mogumogu Cloud - ログイン</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="/public/css/style.css">
@@ -23,7 +23,7 @@ if (isset($_SESSION['user_id'])) {
 <body>
     <div class="container d-flex flex-column justify-content-center align-items-center vh-100">
         <!-- ロゴ部分 -->
-        <img src="/public/assets/logo.png" alt="Obento System Logo" class="mb-4" style="max-width: 150px;">
+        <img src="/public/assets/logo.png" alt="Mogumogu Cloud Logo" class="mb-4" style="max-width: 150px;">
 
         <!-- ログイン枠 -->
         <div class="card p-4 shadow-sm" style="width: 100%; max-width: 400px;">
