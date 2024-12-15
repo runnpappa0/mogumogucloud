@@ -90,6 +90,13 @@ try {
     // today-order.php の GET メソッド処理部分
     if ($method === 'GET') {
         $today = date('Y-m-d');
+
+        // ユーザー情報を取得
+        $userQuery = 'SELECT can_change_delivery, default_delivery_place FROM users WHERE id = :user_id';
+        $stmt = $db->prepare($userQuery);
+        $stmt->execute([':user_id' => $user_id]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+
         // 注文情報を取得
         $query = 'SELECT * FROM bento_orders WHERE user_id = :user_id AND order_date = :order_date';
         $stmt = $db->prepare($query);
@@ -112,13 +119,17 @@ try {
             echo json_encode([
                 'success' => true,
                 'order' => $order,
-                'remainingChanges' => $remainingChanges
+                'remainingChanges' => $remainingChanges,
+                'user_can_change_delivery' => (bool)$userData['can_change_delivery'],
+                'default_delivery_place' => $userData['default_delivery_place']
             ]);
         } else {
             echo json_encode([
                 'success' => false,
                 'message' => '本日注文がありません。',
-                'remainingChanges' => $remainingChanges
+                'remainingChanges' => $remainingChanges,
+                'user_can_change_delivery' => (bool)$userData['can_change_delivery'],
+                'default_delivery_place' => $userData['default_delivery_place']
             ]);
         }
     } elseif ($method === 'POST') {
@@ -161,7 +172,7 @@ try {
                     echo json_encode(['success' => true, 'message' => '注文を更新しました。']);
                     exit;
                 }
-                
+
                 // 更新
                 $query = 'UPDATE bento_orders 
                           SET bento_type = :bento_type, rice_amount = :rice_amount, delivery_place = :delivery_place, updated_at = NOW()

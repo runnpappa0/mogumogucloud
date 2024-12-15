@@ -113,32 +113,28 @@
       document.getElementById("footer").innerHTML = await fetch("/templates/layouts/footer.php").then(res => res.text());
     }
 
-    // 変更回数表示を更新する関数
+    // 変更回数表示を更新する関数（変更なし）
     function updateChangeLimitDisplay(remainingChanges) {
       const changeLimitDiv = document.getElementById('changeLimit');
       const orderForm = document.getElementById('orderForm');
       const addOrderBtn = document.getElementById('addOrderBtn');
       const saveNewOrderBtn = document.getElementById('saveNewOrder');
 
-      // 変更回数表示の設定
       changeLimitDiv.style.display = 'block';
 
       if (remainingChanges > 0) {
         changeLimitDiv.className = 'alert alert-info mb-3';
         changeLimitDiv.innerHTML = `本日の注文変更可能回数：${remainingChanges}/2`;
 
-        // ボタン類の有効化
         if (orderForm) {
           orderForm.querySelectorAll('button').forEach(btn => btn.disabled = false);
         }
         if (addOrderBtn) addOrderBtn.disabled = false;
         if (saveNewOrderBtn) saveNewOrderBtn.disabled = false;
-
       } else {
         changeLimitDiv.className = 'alert alert-warning mb-3';
         changeLimitDiv.innerHTML = '本日の注文変更可能回数を超えました。変更が必要な場合は、電話でご連絡ください。';
 
-        // ボタン類の無効化
         if (orderForm) {
           orderForm.querySelectorAll('button').forEach(btn => btn.disabled = true);
         }
@@ -166,58 +162,84 @@
         if (data.success) {
           // 注文が存在する場合、編集フォームを表示
           const order = data.order;
+          const userCanChange = data.user_can_change_delivery;
+          const defaultPlace = data.default_delivery_place;
+
+          // 配達先のフィールドセット生成
+          const deliveryFieldset = `
+                  <fieldset class="mb-3">
+                      <legend class="form-label">配達先</legend>
+                      <div class="d-flex gap-3">
+                          <div>
+                              <input type="radio" id="deliveryInside" name="delivery_place" value="施設内" 
+                                      ${order.delivery_place === "施設内" ? "checked data-current=\"true\"" : ""}
+                                      ${!userCanChange ? "disabled" : ""}>
+                              <label for="deliveryInside">施設内</label>
+                          </div>
+                          <div>
+                              <input type="radio" id="deliveryOutside" name="delivery_place" value="施設外"
+                                      ${order.delivery_place === "施設外" ? "checked data-current=\"true\"" : ""}
+                                      ${!userCanChange ? "disabled" : ""}>
+                              <label for="deliveryOutside">施設外</label>
+                          </div>
+                      </div>
+                      ${!userCanChange ? `<input type="hidden" name="delivery_place" value="${defaultPlace}">` : ''}
+                  </fieldset>
+              `;
           orderContent.innerHTML = `
-        <form id="orderForm">
-            <div class="mb-3">
-                <label for="bentoType" class="form-label">お弁当タイプ</label>
-                <select id="bentoType" name="bento_type" class="form-select" data-current="${order.bento_type}">
-                    <option value="Aランチ" ${order.bento_type === "Aランチ" ? "selected" : ""}>Aランチ</option>
-                    <option value="Bランチ" ${order.bento_type === "Bランチ" ? "selected" : ""}>Bランチ</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="riceAmount" class="form-label">ライスの量</label>
-                <select id="riceAmount" name="rice_amount" class="form-select" data-current="${order.rice_amount}">
-                    <option value="大盛" ${order.rice_amount === "大盛" ? "selected" : ""}>大盛</option>
-                    <option value="普通盛" ${order.rice_amount === "普通盛" ? "selected" : ""}>普通盛</option>
-                    <option value="半ライス" ${order.rice_amount === "半ライス" ? "selected" : ""}>半ライス</option>
-                    <option value="おかずのみ" ${order.rice_amount === "おかずのみ" ? "selected" : ""}>おかずのみ</option>
-                </select>
-            </div>
-            <fieldset class="mb-3">
-                <legend class="form-label">配達先</legend>
-                <div class="d-flex gap-3">
-                    <div>
-                        <input type="radio" id="deliveryInside" name="delivery_place" value="施設内" 
-                               ${order.delivery_place === "施設内" ? "checked data-current=\"true\"" : ""}>
-                        <label for="deliveryInside">施設内</label>
-                    </div>
-                    <div>
-                        <input type="radio" id="deliveryOutside" name="delivery_place" value="施設外"
-                               ${order.delivery_place === "施設外" ? "checked data-current=\"true\"" : ""}>
-                        <label for="deliveryOutside">施設外</label>
-                    </div>
-                </div>
-            </fieldset>
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">変更</button>
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">注文をキャンセル</button>
-            </div>
-        </form>
-    `;
+                  <form id="orderForm">
+                      <div class="mb-3">
+                          <label for="bentoType" class="form-label">お弁当タイプ</label>
+                          <select id="bentoType" name="bento_type" class="form-select" data-current="${order.bento_type}">
+                              <option value="Aランチ" ${order.bento_type === "Aランチ" ? "selected" : ""}>Aランチ</option>
+                              <option value="Bランチ" ${order.bento_type === "Bランチ" ? "selected" : ""}>Bランチ</option>
+                          </select>
+                      </div>
+                      <div class="mb-3">
+                          <label for="riceAmount" class="form-label">ライスの量</label>
+                          <select id="riceAmount" name="rice_amount" class="form-select" data-current="${order.rice_amount}">
+                              <option value="大盛" ${order.rice_amount === "大盛" ? "selected" : ""}>大盛</option>
+                              <option value="普通盛" ${order.rice_amount === "普通盛" ? "selected" : ""}>普通盛</option>
+                              <option value="半ライス" ${order.rice_amount === "半ライス" ? "selected" : ""}>半ライス</option>
+                              <option value="おかずのみ" ${order.rice_amount === "おかずのみ" ? "selected" : ""}>おかずのみ</option>
+                          </select>
+                      </div>
+                      ${deliveryFieldset}
+                      <div class="d-flex gap-2">
+                          <button type="submit" class="btn btn-primary">変更</button>
+                          <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">注文をキャンセル</button>
+                      </div>
+                  </form>
+              `;
           noOrder.style.display = "none";
           orderContent.style.display = "block";
+
+          // 配達先の初期設定
+          if (!userCanChange) {
+            const deliveryPlace = document.querySelector(`input[name="delivery_place"][value="${defaultPlace}"]`);
+            if (deliveryPlace) {
+              deliveryPlace.checked = true;
+            }
+          }
         } else {
-          // 注文が存在しない場合、新規追加を表示
+          // 注文が存在しない場合の処理
           orderContent.innerHTML = "";
           noOrder.style.display = "block";
           orderContent.style.display = "none";
+
+          // 新規注文モーダルの配達先を設定
+          if (!data.user_can_change_delivery) {
+            const deliverySelect = document.getElementById('newDeliveryPlace');
+            if (deliverySelect) {
+              deliverySelect.value = data.default_delivery_place;
+              deliverySelect.disabled = true;
+            }
+          }
         }
       } catch (error) {
         alert("エラーが発生しました。もう一度お試しください。");
       }
     }
-
     // 注文を変更する関数
     async function handleSubmitOrder(event) {
       event.preventDefault();
@@ -239,6 +261,7 @@
           deliveryPlace === currentOrder.delivery_place) {
           return;
         }
+
         const orderData = {
           bento_type: bentoType,
           rice_amount: riceAmount,
@@ -256,7 +279,7 @@
         const result = await response.json();
         if (result.success) {
           alert(result.message);
-          fetchTodayOrder(); // 画面を更新
+          fetchTodayOrder();
         } else {
           alert(result.message || "注文の変更に失敗しました。");
         }
@@ -265,7 +288,7 @@
       }
     }
 
-    // 注文キャンセル
+    // 注文キャンセル（変更なし）
     async function handleCancelOrder() {
       try {
         const response = await fetch("/php/api/today-order.php", {
@@ -275,7 +298,7 @@
 
         if (result.success) {
           alert("注文をキャンセルしました。");
-          fetchTodayOrder(); // 画面を更新
+          fetchTodayOrder();
         } else {
           alert(result.message || "キャンセルに失敗しました。");
         }
@@ -313,7 +336,7 @@
         if (result.success) {
           alert("新規注文が保存されました。");
           document.getElementById("addOrderForm").reset();
-          fetchTodayOrder(); // 画面を更新
+          fetchTodayOrder();
 
           const addOrderModal = bootstrap.Modal.getInstance(document.getElementById("addOrderModal"));
           addOrderModal.hide();
@@ -332,12 +355,10 @@
         const data = await response.json();
 
         if (!data.success || !data.links || data.links.length === 0) {
-          // メニューが存在しない場合はブロックを非表示
           document.getElementById('menuLinks').style.display = 'none';
           return;
         }
 
-        // メニューブロックを表示
         document.getElementById('menuLinks').style.display = 'block';
         const content = document.getElementById('menuLinksContent');
 
@@ -354,43 +375,36 @@
 
         // 内容を生成
         content.innerHTML = Object.entries(grouped).map(([month, links]) => `
-                <div class="col-md-6">
-                    <h4 class="h5 mb-3">${month}</h4>
-                    <div class="d-flex flex-column gap-3">
-                        ${links.map(link => {
-                            // URLの拡張子をチェック
-                            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(link.link_url);
-                            
-                            if (isImage) {
-                                return `
-                                  <div>
-                                      <p class="mb-2">${link.bento_type}</p>
-                                      <a href="${link.link_url}" target="_blank" class="d-inline-block">
-                                          <img src="${link.link_url}" alt="${month} ${link.bento_type}のメニュー" 
-                                              class="img-fluid img-thumbnail">
-                                      </a>
-                                  </div>
-                                `;
-                            } else {
-                                return ` <
-          div >
-          <
-          a href = "${link.link_url}"
-          target = "_blank"
-          class = "text-decoration-none" >
-          $ {
-            link.bento_type
-          }
-          のメニューを表示 <
-          i class = "bi bi-box-arrow-up-right ms-1" > < /i> < /
-          a > <
-          /div>
-          `;
-                            }
-                        }).join('')}
-                    </div>
-                </div>
-            `).join('');
+          <div class="col-md-6">
+              <h4 class="h5 mb-3">${month}</h4>
+              <div class="d-flex flex-column gap-3">
+                  ${links.map(link => {
+                      const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(link.link_url);
+                      
+                      if (isImage) {
+                          return `
+                              <div>
+                                  <p class="mb-2">${link.bento_type}</p>
+                                  <a href="${link.link_url}" target="_blank" class="d-inline-block">
+                                      <img src="${link.link_url}" alt="${month} ${link.bento_type}のメニュー" 
+                                          class="img-fluid img-thumbnail">
+                                  </a>
+                              </div>
+                          `;
+                      } else {
+                          return ` <
+                              <div>
+                                  <a href="${link.link_url}" target="_blank" class="text-decoration-none">
+                                      ${link.bento_type}のメニューを表示
+                                      <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                  </a>
+                              </div>
+                          `;
+                      }
+                  }).join('')}
+              </div>
+          </div>
+      `).join('');
 
       } catch (error) {
         console.error('メニューリンクの取得に失敗:', error);
