@@ -277,15 +277,19 @@ async function openEditModal(orderId) {
         const riceAmountField = document.getElementById('riceAmount');
         const deliveryPlaceField = document.getElementById('deliveryPlace');
 
-        // 値をセット（order.bento_typeが必ず正しい値を持つことを前提）
+        // 値をセットし、現在値をdata属性に保持
         if (bentoTypeField.querySelector(`option[value="${order.bento_type}"]`)) {
             bentoTypeField.value = order.bento_type;
+            bentoTypeField.setAttribute('data-current', order.bento_type);
         } else {
             console.error(`無効な弁当タイプ: ${order.bento_type}`);
         }
 
         riceAmountField.value = order.rice_amount || '未選択';
+        riceAmountField.setAttribute('data-current', order.rice_amount || '未選択');
+
         deliveryPlaceField.value = order.delivery_place;
+        deliveryPlaceField.setAttribute('data-current', order.delivery_place);
 
         // ライスの量の状態を更新
         toggleRiceAmountField(order.bento_type, 'riceAmount');
@@ -317,6 +321,20 @@ async function saveOrderChanges() {
     const bentoType = document.getElementById('bentoType').value;
     const riceAmount = document.getElementById('riceAmount').value;
     const deliveryPlace = document.getElementById('deliveryPlace').value;
+
+    // 現在の注文内容と比較
+    const currentOrder = {
+        bento_type: document.getElementById('bentoType').getAttribute('data-current'),
+        rice_amount: document.getElementById('riceAmount').getAttribute('data-current'),
+        delivery_place: document.getElementById('deliveryPlace').getAttribute('data-current')
+    };
+
+    // 変更があるかチェック
+    if (bentoType === currentOrder.bento_type &&
+        riceAmount === currentOrder.rice_amount &&
+        deliveryPlace === currentOrder.delivery_place) {
+        return;
+    }
 
     // バリデーション
     if ((bentoType === 'Aランチ' || bentoType === 'Bランチ') && riceAmount === '未選択') {
@@ -550,16 +568,16 @@ function formatChangeDetail(action, detail) {
                 // 値が実際に変更された項目のみを追加
                 if (changeDetail.bento_type &&
                     changeDetail.bento_type.before !== changeDetail.bento_type.after) {
-                    changes.push(`${changeDetail.bento_type.before}→${changeDetail.bento_type.after}`);
+                    changes.push(`${changeDetail.bento_type.before}&rArr;${changeDetail.bento_type.after}`);
                 }
                 if (changeDetail.rice_amount &&
                     changeDetail.bento_type.after !== '冷凍' &&
                     changeDetail.rice_amount.before !== changeDetail.rice_amount.after) {
-                    changes.push(`${changeDetail.rice_amount.before}→${changeDetail.rice_amount.after}`);
+                    changes.push(`${changeDetail.rice_amount.before}&rArr;${changeDetail.rice_amount.after}`);
                 }
                 if (changeDetail.delivery_place &&
                     changeDetail.delivery_place.before !== changeDetail.delivery_place.after) {
-                    changes.push(`${changeDetail.delivery_place.before}→${changeDetail.delivery_place.after}`);
+                    changes.push(`${changeDetail.delivery_place.before}&rArr;${changeDetail.delivery_place.after}`);
                 }
                 return `注文を変更しました。（${changes.join('、')}）`;
 
