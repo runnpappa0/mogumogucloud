@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
         <a class="navbar-brand" href="admin-dashboard.php">
-            <img src="/public/assets/logo_long.png" alt="Obento System Logo" class="logo">
+            <img src="/public/assets/logo_long.png" alt="もぐもぐクラウド Logo" class="logo">
             管理画面
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMenu" aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navigation">
