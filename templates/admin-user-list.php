@@ -30,11 +30,11 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>ユーザーネーム</th>
                     <th>名前</th>
                     <th>お弁当が必要な曜日</th>
                     <th>お弁当タイプ</th>
                     <th>ライスの量</th>
+                    <th>配置</th>
                     <th>特記事項</th>
                     <th>区分</th>
                     <th>操作</th>
@@ -111,10 +111,18 @@
                         <div class="mb-3">
                             <label for="editRiceAmount" class="form-label">ライスの量</label>
                             <select id="editRiceAmount" class="form-select">
+                                <option value="">未選択</option>
                                 <option value="大盛">大盛</option>
                                 <option value="普通盛">普通盛</option>
                                 <option value="半ライス">半ライス</option>
                                 <option value="おかずのみ">おかずのみ</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDeliveryPlace" class="form-label">配置</label>
+                            <select id="editDeliveryPlace" class="form-select" required>
+                                <option value="施設内">施設内</option>
+                                <option value="施設外">施設外</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -126,6 +134,13 @@
                             <select id="editRole" class="form-select">
                                 <option value="利用者">利用者</option>
                                 <option value="スタッフ">スタッフ</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editCanChangeDelivery" class="form-label">配達先変更権限</label>
+                            <select id="editCanChangeDelivery" class="form-select" required>
+                                <option value="1">あり</option>
+                                <option value="0">なし</option>
                             </select>
                         </div>
                     </form>
@@ -142,44 +157,44 @@
     <div id="footer"></div>
 
     <script>
-    // ヘッダーとフッターを読み込む
-    async function loadLayout() {
-    document.getElementById("header").innerHTML = await fetch(
-        "/templates/layouts/admin-header.php").then(res => res.text());
-    document.getElementById("footer").innerHTML = await fetch(
-        "/templates/layouts/admin-footer.php").then(res => res.text());
-    }
+        // ヘッダーとフッターを読み込む
+        async function loadLayout() {
+            document.getElementById("header").innerHTML = await fetch(
+                "/templates/layouts/admin-header.php").then(res => res.text());
+            document.getElementById("footer").innerHTML = await fetch(
+                "/templates/layouts/admin-footer.php").then(res => res.text());
+        }
 
-    // ユーザー一覧を取得
-    async function fetchUserList() {
-    	const tbody = document.getElementById('userList');
-    	tbody.innerHTML = '<tr><td colspan="9">データを読み込んでいます...</td></tr>';
+        // ユーザー一覧を取得
+        async function fetchUserList() {
+            const tbody = document.getElementById('userList');
+            tbody.innerHTML = '<tr><td colspan="9">データを読み込んでいます...</td></tr>';
 
-    	try {
-    		const response = await fetch('/php/api/admin-user-list.php');
-    		const data = await response.json();
+            try {
+                const response = await fetch('/php/api/admin-user-list.php');
+                const data = await response.json();
 
-    		if (!data.success || !data.users) {
-    			throw new Error(data.message || '利用者データが取得できませんでした。');
-    		}
+                if (!data.success || !data.users) {
+                    throw new Error(data.message || '利用者データが取得できませんでした。');
+                }
 
-    		tbody.innerHTML = '';
-    		data.users.forEach((user, index) => {
-    			const weekdays = user.weekdays ? user.weekdays.split(',').join('・') :
-    				'';
-    			const bentoType = user.bento_type || '';
-    			const riceAmount = user.rice_amount || '';
-    			const notes = user.contract_notes || '';
+                tbody.innerHTML = '';
+                data.users.forEach((user, index) => {
+                    const weekdays = user.weekdays ? user.weekdays.split(',').join('・') :
+                        '';
+                    const bentoType = user.bento_type || '';
+                    const riceAmount = user.rice_amount || '';
+                    const notes = user.contract_notes || '';
 
-    			const row =
-    				`
+                    const row =
+                        `
                     <tr>
                         <td>${index + 1}</td>
-                        <td>${user.username}</td>
                         <td>${user.name}</td>
                         <td>${weekdays}</td>
                         <td>${bentoType}</td>
                         <td>${riceAmount}</td>
+                        <td>${user.default_delivery_place || ''}</td>
                         <td>${notes}</td>
                         <td>${user.role}</td>
                         <td>
@@ -188,132 +203,159 @@
                         </td>
                     </tr>
                 `;
-    			tbody.innerHTML += row;
-    		});
-    	} catch (error) {
-    		console.error('利用者一覧取得中にエラーが発生しました:', error);
-    		tbody.innerHTML = `<tr><td colspan="9">エラー: ${error.message}</td></tr>`;
-    	}
-    }
-
-    // 名前検索
-    document.getElementById('searchInput').addEventListener('input', (event) => {
-    	const query = event.target.value.toLowerCase();
-    	const rows = document.querySelectorAll('#userList tr');
-    	rows.forEach(row => {
-    		const nameCell = row.querySelector('td:nth-child(3)');
-    		if (nameCell && nameCell.textContent.toLowerCase().includes(query)) {
-    			row.style.display = '';
-    		} else {
-    			row.style.display = 'none';
-    		}
-    	});
-    });
-
-    function togglePasswordVisibility() {
-    	const passwordInput = document.getElementById('editPassword');
-    	if (passwordInput.type === 'password') {
-    		passwordInput.type = 'text';
-    	} else {
-    		passwordInput.type = 'password';
-    	}
-    }
-
-    // ユーザー情報を編集モーダルに反映
-    async function loadUserData(userId) {
-        try {
-            const response = await fetch(`/php/api/admin-user-list.php?id=${userId}`);
-            const data = await response.json();
-
-            if (!data.success || !data.user) {
-                throw new Error(data.message || '利用者データが取得できませんでした。');
+                    tbody.innerHTML += row;
+                });
+            } catch (error) {
+                console.error('利用者一覧取得中にエラーが発生しました:', error);
+                tbody.innerHTML = `<tr><td colspan="9">エラー: ${error.message}</td></tr>`;
             }
-
-            const user = data.user;
-
-            // 修正：IDを隠しフィールドにセットし、ユーザーネームは別途表示
-            document.getElementById('editUserId').value = user.id; // 修正箇所
-            document.getElementById('editUsername').value = user.username; // 表示専用
-
-            document.getElementById('editName').value = user.name;
-            document.getElementById('editRole').value = user.role;
-
-            const weekdays = user.weekdays ? user.weekdays.split(',') : [];
-            document.querySelectorAll('#editDays input[type="checkbox"]').forEach(checkbox => {
-                checkbox.checked = weekdays.includes(checkbox.value);
-            });
-
-            document.getElementById('editBentoType').value = user.bento_type || 'Aランチ';
-            document.getElementById('editRiceAmount').value = user.rice_amount || '';
-            document.getElementById('editNotes').value = user.contract_notes || '';
-        } catch (error) {
-            console.error('編集データ取得中にエラーが発生しました:', error);
         }
-    }
 
-    // ユーザー情報を保存
-    async function saveUserData() {
-        const userId = document.getElementById('editUserId').value; // 修正箇所
-        const data = {
-            id: userId, // 正しい user_id を送信
-            password: document.getElementById('editPassword').value,
-            name: document.getElementById('editName').value,
-            weekdays: Array.from(document.querySelectorAll('#editDays input:checked'))
-                .map(cb => cb.value),
-            bento_type: document.getElementById('editBentoType').value,
-            rice_amount: document.getElementById('editRiceAmount').value,
-            notes: document.getElementById('editNotes').value,
-            role: document.getElementById('editRole').value
-        };
-
-        try {
-            const response = await fetch('/php/api/admin-user-list.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
+        // 名前検索
+        document.getElementById('searchInput').addEventListener('input', (event) => {
+            const query = event.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#userList tr');
+            rows.forEach(row => {
+                const nameCell = row.querySelector('td:nth-child(3)');
+                if (nameCell && nameCell.textContent.toLowerCase().includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
             });
-            const result = await response.json();
-            if (result.success) {
-                alert('ユーザー情報が更新されました。');
-                fetchUserList(); // 更新後にリストをリロード
-                document.querySelector('#editUserModal .btn-close').click();
+        });
+
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('editPassword');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
             } else {
-                alert(result.message || 'ユーザー情報の更新に失敗しました。');
+                passwordInput.type = 'password';
             }
-        } catch (error) {
-            console.error('ユーザー情報更新中にエラーが発生しました:', error);
         }
-    }
 
-    // ユーザー削除
-    async function confirmDelete(userId, username) {
-    	if (!confirm(`ユーザー ${username} を削除します。よろしいですか？`)) return;
+        // ユーザー情報を編集モーダルに反映
+        async function loadUserData(userId) {
+            try {
+                const response = await fetch(`/php/api/admin-user-list.php?id=${userId}`);
+                const data = await response.json();
 
-    	try {
-    		const response = await fetch(`/php/api/admin-user-list.php?id=${userId}`, {
-    			method: 'DELETE',
-    		});
-    		const data = await response.json();
+                if (!data.success || !data.user) {
+                    throw new Error(data.message || '利用者データが取得できませんでした。');
+                }
 
-    		if (data.success) {
-    			alert(data.message);
-    			fetchUserList(); // 一覧を再取得
-    		} else {
-    			alert(data.message || '削除に失敗しました。');
-    		}
-    	} catch (error) {
-    		console.error('削除中にエラーが発生しました:', error);
-    		alert('削除中にエラーが発生しました。');
-    	}
-    }
+                const user = data.user;
+                document.getElementById('editUserId').value = user.id;
+                document.getElementById('editName').value = user.name;
+                document.getElementById('editRole').value = user.role;
 
-    // 初期ロード
-    document.addEventListener('DOMContentLoaded', () => {
-    	loadLayout();
-    	fetchUserList();
-    });
+                // 弁当タイプとライスの量の設定
+                const bentoTypeSelect = document.getElementById('editBentoType');
+                const riceAmountSelect = document.getElementById('editRiceAmount');
+
+                bentoTypeSelect.value = user.bento_type || 'Aランチ';
+                riceAmountSelect.value = user.rice_amount || '';
+
+                // 冷凍の場合、ライスの量を無効化
+                if (user.bento_type === '冷凍') {
+                    riceAmountSelect.value = '';
+                    riceAmountSelect.disabled = true;
+                } else {
+                    riceAmountSelect.disabled = false;
+                }
+
+                // その他の設定
+                const weekdays = user.weekdays ? user.weekdays.split(',') : [];
+                document.querySelectorAll('#editDays input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = weekdays.includes(checkbox.value);
+                });
+
+                document.getElementById('editDeliveryPlace').value = user.default_delivery_place;
+                document.getElementById('editCanChangeDelivery').value = user.can_change_delivery ? "1" : "0";
+                document.getElementById('editNotes').value = user.contract_notes || '';
+            } catch (error) {
+                console.error('編集データ取得中にエラーが発生しました:', error);
+            }
+        }
+
+        // 弁当タイプ変更時のイベントリスナー追加
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('editBentoType').addEventListener('change', function(e) {
+                const riceAmountSelect = document.getElementById('editRiceAmount');
+                if (e.target.value === '冷凍') {
+                    riceAmountSelect.value = '';
+                    riceAmountSelect.disabled = true;
+                } else {
+                    riceAmountSelect.disabled = false;
+                }
+            });
+        });
+        
+        // ユーザー情報を保存
+        async function saveUserData() {
+            const userId = document.getElementById('editUserId').value; // 修正箇所
+            const data = {
+                id: userId, // 正しい user_id を送信
+                password: document.getElementById('editPassword').value,
+                name: document.getElementById('editName').value,
+                weekdays: Array.from(document.querySelectorAll('#editDays input:checked'))
+                    .map(cb => cb.value),
+                bento_type: document.getElementById('editBentoType').value,
+                rice_amount: document.getElementById('editRiceAmount').value,
+                default_delivery_place: document.getElementById('editDeliveryPlace').value,
+                notes: document.getElementById('editNotes').value,
+                role: document.getElementById('editRole').value,
+                can_change_delivery: Number(document.getElementById('editCanChangeDelivery').value),
+            };
+
+            try {
+                const response = await fetch('/php/api/admin-user-list.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('ユーザー情報が更新されました。');
+                    fetchUserList(); // 更新後にリストをリロード
+                    document.querySelector('#editUserModal .btn-close').click();
+                } else {
+                    alert(result.message || 'ユーザー情報の更新に失敗しました。');
+                }
+            } catch (error) {
+                console.error('ユーザー情報更新中にエラーが発生しました:', error);
+            }
+        }
+
+        // ユーザー削除
+        async function confirmDelete(userId, username) {
+            if (!confirm(`ユーザー ${username} を削除します。よろしいですか？`)) return;
+
+            try {
+                const response = await fetch(`/php/api/admin-user-list.php?id=${userId}`, {
+                    method: 'DELETE',
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    fetchUserList(); // 一覧を再取得
+                } else {
+                    alert(data.message || '削除に失敗しました。');
+                }
+            } catch (error) {
+                console.error('削除中にエラーが発生しました:', error);
+                alert('削除中にエラーが発生しました。');
+            }
+        }
+
+        // 初期ロード
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLayout();
+            fetchUserList();
+        });
     </script>
 </body>
 

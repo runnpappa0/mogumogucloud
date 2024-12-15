@@ -17,11 +17,11 @@ try {
 
     if ($method === 'GET') {
         if (isset($_GET['id'])) {
-            // 個別ユーザー情報取得
             $userId = (int) $_GET['id'];
             $query = "
                 SELECT 
-                    u.id, u.username, u.password, u.name, u.role, 
+                    u.id, u.username, u.password, u.name, u.role,
+                    u.default_delivery_place, u.can_change_delivery,
                     cd.weekdays, cd.bento_type, cd.rice_amount, cd.notes AS contract_notes
                 FROM users AS u
                 LEFT JOIN contract_details AS cd ON u.id = cd.user_id
@@ -37,14 +37,26 @@ try {
                 echo json_encode(['success' => false, 'message' => 'ユーザーが見つかりません。']);
             }
         } else {
-            // 全ユーザー情報取得
             $query = "
                 SELECT 
-                    u.id, u.username, u.password, u.name, u.role, 
+                    u.id, u.username, u.name, u.role,
+                    u.default_delivery_place, u.can_change_delivery,
                     cd.weekdays, cd.bento_type, cd.rice_amount, cd.notes AS contract_notes
                 FROM users AS u
                 LEFT JOIN contract_details AS cd ON u.id = cd.user_id
-                ORDER BY u.id
+                WHERE u.role != '管理者'
+                ORDER BY 
+                    CASE u.role 
+                        WHEN '利用者' THEN 1
+                        WHEN 'スタッフ' THEN 2
+                        ELSE 3
+                    END,
+                    CASE u.default_delivery_place
+                        WHEN '施設内' THEN 1
+                        WHEN '施設外' THEN 2
+                        ELSE 3
+                    END,
+                    u.name
             ";
             $stmt = $db->prepare($query);
             $stmt->execute();
@@ -73,14 +85,20 @@ try {
         // usersテーブルの更新
         $userQuery = "
             UPDATE users 
-            SET name = :name, password = :password, role = :role 
+            SET name = :name,
+                password = :password,
+                role = :role,
+                default_delivery_place = :default_delivery_place,
+                can_change_delivery = :can_change_delivery
             WHERE id = :id
         ";
         $userStmt = $db->prepare($userQuery);
         $userStmt->execute([
             ':name' => $input['name'],
-            ':password' => $password, 
+            ':password' => $password,
             ':role' => $input['role'],
+            ':default_delivery_place' => $input['default_delivery_place'],
+            ':can_change_delivery' => $input['can_change_delivery'],
             ':id' => $input['id']
         ]);
 
@@ -89,9 +107,9 @@ try {
             INSERT INTO contract_details (user_id, weekdays, bento_type, rice_amount, notes)
             VALUES (:user_id, :weekdays, :bento_type, :rice_amount, :notes)
             ON DUPLICATE KEY UPDATE
-                weekdays = VALUES(weekdays), 
+                weekdays = VALUES(weekdays),
                 bento_type = VALUES(bento_type),
-                rice_amount = VALUES(rice_amount), 
+                rice_amount = VALUES(rice_amount),
                 notes = VALUES(notes)
         ";
         $detailsStmt = $db->prepare($detailsQuery);
@@ -99,7 +117,7 @@ try {
             ':user_id' => $input['id'],
             ':weekdays' => isset($input['weekdays']) ? implode(',', $input['weekdays']) : null,
             ':bento_type' => $input['bento_type'] ?? 'Aランチ',
-            ':rice_amount' => $input['rice_amount'] ?? null,
+            ':rice_amount' => ($input['bento_type'] === '冷凍') ? null : ($input['rice_amount'] ?? null),
             ':notes' => $input['notes'] ?? null
         ]);
 
