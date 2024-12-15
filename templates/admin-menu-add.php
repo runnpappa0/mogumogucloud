@@ -17,7 +17,7 @@
 
     <!-- メインコンテンツ -->
     <div class="container mt-5 pt-5">
-        <h2>メニュー登録</h2>
+        <h1>メニュー登録</h1>
 
         <form id="menuLinkForm" class="mt-4">
             <!-- 今月 -->
