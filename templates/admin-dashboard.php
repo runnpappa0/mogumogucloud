@@ -31,7 +31,7 @@ error_reporting(E_ALL);
 
             <!-- 施設内テーブル -->
             <h3>施設内</h3>
-            <table id="facilityInsideTable" class="table table-bordered">
+            <table id="facilityInsideTable" class="table table-bordered orderTable mb-5">
                 <thead>
                     <tr>
                         <th></th>
@@ -61,7 +61,7 @@ error_reporting(E_ALL);
 
             <!-- 施設外テーブル -->
             <h3>施設外</h3>
-            <table id="facilityOutsideTable" class="table table-bordered">
+            <table id="facilityOutsideTable" class="table table-bordered orderTable mb-5">
                 <thead>
                     <tr>
                         <th></th>
@@ -91,7 +91,7 @@ error_reporting(E_ALL);
 
             <!-- 冷凍テーブル -->
             <h3>冷凍</h3>
-            <table id="frozenTable" class="table table-bordered">
+            <table id="frozenTable" class="table table-bordered mb-4">
                 <thead>
                     <tr>
                         <th>施設内</th>
@@ -108,7 +108,7 @@ error_reporting(E_ALL);
         </div>
 
         <!-- 注文追加ボタン -->
-        <div class="text-end mt-4">
+        <div class="mb-5">
             <button class="btn btn-primary open-add-order-modal" data-bs-toggle="modal"
                 data-bs-target="#addOrderModal">注文を追加</button>
         </div>

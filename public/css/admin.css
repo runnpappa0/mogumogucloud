@@ -1,0 +1,44 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.container {
+  flex: 1;
+}
+
+#header .navbar {
+  padding-left: 5%;
+  padding-right: 5%;
+}
+
+#footer {
+  margin-top: 50px;
+}
+
+.logo {
+  height: 34px;
+  margin-right: 10px;
+}
+
+.orderTable {
+  table-layout: fixed;
+  width: 750px !important;
+}
+
+.orderTable th,
+.orderTable td,
+#frozenTable th,
+#frozenTable td {
+  width: 150px;
+  word-wrap: break-word;
+}
+
+#frozenTable {
+  width: 300px;
+}

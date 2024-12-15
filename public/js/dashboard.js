@@ -52,8 +52,8 @@ function updateFrozenTable(tableId, frozenData) {
     const cells = table.querySelectorAll('tbody tr td');
 
     // 冷凍データを表示
-    cells[0].textContent = frozenData.facility_inside || ''; // 施設内
-    cells[1].textContent = frozenData.facility_outside || ''; // 施設外
+    cells[0].innerHTML = frozenData.facility_inside || '&nbsp;'; // 施設内
+    cells[1].innerHTML = frozenData.facility_outside || '&nbsp;'; // 施設外
 }
 
 // ユーザー取得
