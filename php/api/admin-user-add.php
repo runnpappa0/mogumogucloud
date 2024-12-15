@@ -14,7 +14,10 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
 
     // 必須項目チェック
-    if (empty($input['username']) || empty($input['password']) || empty($input['name'])) {
+    if (
+        empty($input['username']) || empty($input['password']) ||
+        empty($input['name']) || empty($input['default_delivery_place'])
+    ) {
         echo json_encode(['success' => false, 'message' => '必須項目が不足しています。']);
         exit;
     }
@@ -22,13 +25,16 @@ try {
     $db = getDbConnection();
 
     // usersテーブルに追加
-    $userQuery = "INSERT INTO users (username, password, name, role) VALUES (:username, :password, :name, :role)";
+    $userQuery = "INSERT INTO users (username, password, name, role, default_delivery_place, can_change_delivery) 
+    VALUES (:username, :password, :name, :role, :default_delivery_place, :can_change_delivery)";
     $userStmt = $db->prepare($userQuery);
     $userStmt->execute([
         ':username' => $input['username'],
-        ':password' => $input['password'], // 平文保存（ハッシュ化は次のタスク）
+        ':password' => $input['password'],
         ':name' => $input['name'],
-        ':role' => $input['role']
+        ':role' => $input['role'],
+        ':default_delivery_place' => $input['default_delivery_place'],
+        ':can_change_delivery' => $input['can_change_delivery'] ? 1 : 0  // 追加
     ]);
 
     $userId = $db->lastInsertId();

@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Obento System - 新規利用者追加</title>
+    <title>Obento System - 新規ユーザー追加</title>
     <link rel="stylesheet" href="/public/css/style.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
+
 <body>
     <!-- ヘッダー -->
     <div id="header"></div>
 
     <!-- メインコンテンツ -->
     <div class="container mt-4">
-        <h1 class="mb-4">新規利用者追加</h1>
+        <h1 class="mb-4">新規ユーザー追加</h1>
         <form id="addUserForm">
             <div class="mb-3">
                 <label for="addUsername" class="form-label">ユーザー名</label>
@@ -68,6 +70,13 @@
                 </select>
             </div>
             <div class="mb-3">
+                <label for="addDeliveryPlace" class="form-label">配置</label>
+                <select id="addDeliveryPlace" class="form-select" required>
+                    <option value="施設内">施設内</option>
+                    <option value="施設外">施設外</option>
+                </select>
+            </div>
+            <div class="mb-3">
                 <label for="addNotes" class="form-label">特記事項</label>
                 <textarea id="addNotes" class="form-control" rows="3" placeholder="アレルギー情報や特別な注意事項を入力"></textarea>
             </div>
@@ -76,6 +85,13 @@
                 <select id="addRole" class="form-select">
                     <option value="利用者">利用者</option>
                     <option value="スタッフ">スタッフ</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="addCanChangeDelivery" class="form-label">配達先変更権限</label>
+                <select id="addCanChangeDelivery" class="form-select" required>
+                    <option value="1">あり</option>
+                    <option value="0" selected>なし</option>
                 </select>
             </div>
             <div class="text-end">
@@ -126,8 +142,10 @@
             const weekdays = Array.from(document.querySelectorAll('#addDays input:checked')).map(cb => cb.value);
             const bentoType = document.getElementById('addBentoType').value || null;
             const riceAmount = document.getElementById('addRiceAmount').value || null;
+            const deliveryPlace = document.getElementById('addDeliveryPlace').value;
             const notes = document.getElementById('addNotes').value.trim();
             const role = document.getElementById('addRole').value;
+            const canChangeDelivery = document.getElementById('addCanChangeDelivery').value;
 
             // 必須項目チェック
             if (!username || !password || !name) {
@@ -144,7 +162,9 @@
                 weekdays: weekdays.length > 0 ? weekdays : null,
                 bento_type: weekdays.length > 0 && bentoType ? bentoType : null,
                 rice_amount: weekdays.length > 0 && riceAmount ? riceAmount : null,
-                notes: weekdays.length > 0 ? notes : null
+                default_delivery_place: deliveryPlace,
+                notes: weekdays.length > 0 ? notes : null,
+                can_change_delivery: canChangeDelivery === "1"
             };
 
             try {
@@ -182,4 +202,5 @@
         });
     </script>
 </body>
+
 </html>
