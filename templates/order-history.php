@@ -63,6 +63,8 @@ if (!isset($_SESSION['user_id'])) {
         </nav>
     </div>
 
+    <div class="mb-5"></div>
+
     <!-- フッター -->
     <div id="footer"></div>
 
@@ -102,7 +104,7 @@ if (!isset($_SESSION['user_id'])) {
                         <td>${order.bento_type}</td>
                         <td>${order.rice_amount || 'なし'}</td>
                         <td>${order.delivery_place}</td>
-                        <td><span class="badge ${order.status === '消費済み' ? 'bg-success' : 'bg-danger'}">${order.status}</span></td>
+                        <td><span class="badge ${order.status === '消費済み' ? 'bg-success' : 'bg-warning'}">${order.status}</span></td>
                     `;
                     tbody.appendChild(row);
                 });

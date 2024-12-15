@@ -44,7 +44,7 @@
         <!-- ロスユーザーリスト -->
         <div class="mb-4">
             <h5>ロスのある利用者リスト</h5>
-            <table class="table table-striped w-75">
+            <table class="table table-striped w-50">
                 <thead>
                     <tr>
                         <th>利用者名</th>

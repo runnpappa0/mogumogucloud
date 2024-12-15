@@ -64,6 +64,8 @@ if (!isset($_SESSION['user_id'])) {
         </nav>
     </div>
 
+    <div class="mb-5"></div>
+
     <!-- フッター -->
     <div id="footer"></div>
 
