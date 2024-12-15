@@ -477,6 +477,7 @@ document.getElementById("lossReasonModal").addEventListener("show.bs.modal", fun
                 <option value="無断欠席">無断欠席</option>
                 <option value="時間までに連絡なし">時間までに連絡なし</option>
                 <option value="早退">早退</option>
+                <option value="発注ミス">発注ミス</option>
                 <option value="その他">その他</option>
             </select>
             <input type="text" id="lossReasonOther${index}" class="form-control mt-2 d-none" placeholder="理由を入力してください">
