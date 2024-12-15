@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/public/css/admin.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 
@@ -35,29 +36,58 @@
             </div>
         </div>
 
-        <!-- 複合グラフ -->
-        <div class="mb-5" id="lossChartContainer">
-            <h5 id="chartTitle">月別ロス比較</h5>
-            <canvas id="lossChart"></canvas>
+        <!-- グラフエリア -->
+        <div class="row mb-5">
+            <!-- 月別ロス比較 -->
+            <div class="col-md-6">
+                <h5>月別ロス比較</h5>
+                <canvas id="lossChart"></canvas>
+            </div>
+            <!-- ロス理由内訳 -->
+            <div class="col-md-6">
+                <h5>ロス理由内訳</h5>
+                <canvas id="reasonChart"></canvas>
+            </div>
         </div>
 
-        <!-- ロスユーザーリスト -->
-        <div class="mb-4">
-            <h5>ロスのある利用者リスト</h5>
-            <table class="table table-striped w-50">
-                <thead>
-                    <tr>
-                        <th>利用者名</th>
-                        <th>ロス個数</th>
-                        <th>詳細</th>
-                    </tr>
-                </thead>
-                <tbody id="lossUserList">
-                    <tr>
-                        <td colspan="3">データを読み込んでいます...</td>
-                    </tr>
-                </tbody>
-            </table>
+        <!-- リスト表示エリア -->
+        <div class="row mb-4">
+            <!-- 直近のロス履歴 -->
+            <div class="col-md-6">
+                <h5>直近のロス履歴</h5>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>日付</th>
+                            <th>利用者名</th>
+                            <th>ロス理由</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentLossList">
+                        <tr>
+                            <td colspan="3">データを読み込んでいます...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <!-- ロスのある利用者リスト -->
+            <div class="col-md-6">
+                <h5>ロスのある利用者リスト</h5>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>利用者名</th>
+                            <th>ロス個数</th>
+                            <th>詳細</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lossUserList">
+                        <tr>
+                            <td colspan="3">データを読み込んでいます...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -133,32 +163,40 @@
                     throw new Error(data.message || 'ロスデータの取得に失敗しました。');
                 }
 
-                // ロス金額表示
-                document.getElementById('currentLoss').textContent = `¥${data.current_month_loss.toLocaleString()}`;
-                document.getElementById('totalLoss').textContent = `¥${data.total_loss.toLocaleString()}`;
+                // ロス金額表示（既存）
+                document.getElementById('currentLoss').textContent =
+                    `¥${data.current_month_loss.toLocaleString()}`;
+                document.getElementById('totalLoss').textContent =
+                    `¥${data.total_loss.toLocaleString()}`;
 
                 // グラフの描画
                 if (data.loss_trends.length >= 2) {
                     renderLossChart(data.loss_trends);
                 } else {
-                    document.getElementById('lossChartContainer').style.display = 'none';
+                    document.getElementById('lossChartContainer').innerHTML =
+                        '<h5>月別ロス比較</h5><p class="text-center mt-4">十分なデータがありません</p>';
                 }
 
-                // ロス利用者リスト
+                // ロス理由内訳の描画（新規）
+                renderReasonChart(data.loss_reasons);
+
+                // 直近のロス履歴の表示（新規）
+                updateRecentLossList(data.recent_losses);
+
+                // ロス利用者リスト（既存の修正）
                 const userList = document.getElementById('lossUserList');
-                userList.innerHTML = '';
                 if (data.loss_users.length > 0) {
-                    data.loss_users.forEach(user => {
-                        userList.innerHTML += `
-                            <tr>
-                                <td>${user.name}</td>
-                                <td>${user.loss_count}</td>
-                                <td><button class="btn btn-sm btn-primary loss-detail-btn" data-user-id="${user.id}" data-user-name="${user.name}">詳細</button></td>
-                            </tr>
-                        `;
-                    });
+                    userList.innerHTML = data.loss_users.map(user => `
+                <tr>
+                    <td>${user.name}</td>
+                    <td>${user.loss_count}</td>
+                    <td><button class="btn btn-sm btn-primary loss-detail-btn" 
+                        data-user-id="${user.id}" 
+                        data-user-name="${user.name}">詳細</button></td>
+                </tr>
+            `).join('');
                 } else {
-                    userList.innerHTML = '<tr><td colspan="3">ロスのある利用者はいません。</td></tr>';
+                    userList.innerHTML = '<tr><td colspan="3" class="text-center">ロスのある利用者はいません</td></tr>';
                 }
             } catch (error) {
                 console.error('ロス分析データ取得中にエラーが発生しました:', error);
@@ -170,7 +208,10 @@
             const sortedTrends = trends.sort((a, b) => new Date(a.month) - new Date(b.month));
 
             const ctx = document.getElementById('lossChart').getContext('2d');
-            const labels = sortedTrends.map(t => t.month);
+            const labels = sortedTrends.map(t => {
+                const [year, month] = t.month.split('-');
+                return `${year}年${parseInt(month)}月`;
+            });
             const lossCounts = sortedTrends.map(t => t.loss_count);
             const lossAmounts = sortedTrends.map(t => t.loss_amount);
 
@@ -224,6 +265,80 @@
                     },
                 },
             });
+        }
+
+        // ロス理由内訳の円グラフ描画
+        function renderReasonChart(reasons) {
+            if (!reasons || reasons.length === 0) {
+                document.querySelector('#reasonChart').parentElement.innerHTML =
+                    '<h5>ロス理由内訳</h5><p class="text-center mt-4">データがありません</p>';
+                return;
+            }
+
+            const ctx = document.getElementById('reasonChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'pie',
+                plugins: [ChartDataLabels],
+                data: {
+                    labels: reasons.map(r => r.loss_reason),
+                    datasets: [{
+                        data: reasons.map(r => r.count),
+                        backgroundColor: [
+                            'rgba(77, 137, 245, 0.5)',
+                            'rgba(255, 182, 193, 0.5)',
+                            'rgba(152, 251, 152, 0.5)',
+                            'rgba(255, 215, 0, 0.5)',
+                            'rgba(173, 216, 230, 0.5)'
+                        ],
+                        borderColor: [
+                            'rgba(77, 137, 245, 1)',
+                            'rgba(255, 182, 193, 1)',
+                            'rgba(152, 251, 152, 1)',
+                            'rgba(255, 215, 0, 1)',
+                            'rgba(173, 216, 230, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        },
+                        datalabels: {
+                            color: '#000',
+                            font: {
+                                weight: 'bold'
+                            },
+                            formatter: (value, context) => {
+                                const label = context.chart.data.labels[context.dataIndex];
+                                return `${label}\n${value}件`;
+                            },
+                            anchor: 'center',
+                            align: 'center'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 直近のロス履歴表示
+        function updateRecentLossList(recentLosses) {
+            const tbody = document.getElementById('recentLossList');
+            if (!recentLosses || recentLosses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center">ロス履歴はありません</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = recentLosses.map(loss => `
+                <tr>
+                    <td>${loss.order_date}</td>
+                    <td>${loss.user_name}</td>
+                    <td>${loss.loss_reason}</td>
+                </tr>
+            `).join('');
         }
 
         document.addEventListener('click', (event) => {

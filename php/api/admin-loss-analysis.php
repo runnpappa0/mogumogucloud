@@ -19,7 +19,7 @@ try {
     if ($method === 'GET') {
         if (isset($_GET['user_id'])) {
             // 特定の利用者のロス詳細を取得
-        $userId = (int) $_GET['user_id'];
+            $userId = (int) $_GET['user_id'];
             $lossDetailQuery = "
             SELECT 
                 bo.order_date,
@@ -37,8 +37,8 @@ try {
             $lossDetailStmt->execute([':user_id' => $userId]);
             $lossDetails = $lossDetailStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // 合計ロス数、自己負担額、ロス額を計算
-        $summaryQuery = "
+            // 合計ロス数、自己負担額、ロス額を計算
+            $summaryQuery = "
             SELECT 
                 COUNT(bo.id) AS total_loss_count,
                 COUNT(bo.id) * 200 AS user_burden_amount, -- 修正点
@@ -53,14 +53,14 @@ try {
             $summary = $summaryStmt->fetch(PDO::FETCH_ASSOC);
 
             echo json_encode([
-            'success' => true,
-            'loss_summary' => [
-                'total_loss_count' => $summary['total_loss_count'] ?? 0,
-                'user_burden_amount' => $summary['user_burden_amount'] ?? 0,
-                'total_loss_amount' => $summary['total_loss_amount'] ?? 0,
-            ],
-            'loss_details' => $lossDetails,
-        ]);
+                'success' => true,
+                'loss_summary' => [
+                    'total_loss_count' => $summary['total_loss_count'] ?? 0,
+                    'user_burden_amount' => $summary['user_burden_amount'] ?? 0,
+                    'total_loss_amount' => $summary['total_loss_amount'] ?? 0,
+                ],
+                'loss_details' => $lossDetails,
+            ]);
         } else {
             // **1. 今月とこれまでのロス金額**
             $currentMonthStart = date('Y-m-01');
@@ -103,6 +103,37 @@ try {
             $trendStmt->execute();
             $lossTrends = $trendStmt->fetchAll(PDO::FETCH_ASSOC);
 
+            // **3. ロス理由内訳を取得（追加）**
+            $reasonQuery = "
+                SELECT 
+                    loss_reason,
+                    COUNT(*) as count
+                FROM loss_records
+                GROUP BY loss_reason
+            ";
+            $reasonStmt = $db->prepare($reasonQuery);
+            $reasonStmt->execute();
+            $lossReasons = $reasonStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // **4. 直近のロス履歴を取得（追加）**
+            $recentQuery = "
+                SELECT 
+                    bo.order_date,
+                    u.name as user_name,
+                    CASE 
+                        WHEN lr.loss_reason = 'その他' THEN CONCAT(lr.loss_reason, ' (', lr.additional_notes, ')')
+                        ELSE lr.loss_reason
+                    END as loss_reason
+                FROM loss_records lr
+                JOIN bento_orders bo ON lr.order_id = bo.id
+                JOIN users u ON bo.user_id = u.id
+                ORDER BY bo.order_date DESC, lr.created_at DESC
+                LIMIT 10
+            ";
+            $recentStmt = $db->prepare($recentQuery);
+            $recentStmt->execute();
+            $recentLosses = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
+
             // **最低条件: 今月と先月をチェック**
             $minimumMonths = [
                 date('Y-m'), // 今月
@@ -127,7 +158,7 @@ try {
             // 最大12か月分を取得
             $lossTrends = array_slice($lossTrends, 0, 12);
 
-            // **3. ロスが発生した利用者リスト**
+            // **5. ロスが発生した利用者リスト**
             $userQuery = "
                 SELECT 
                     u.id,
@@ -150,11 +181,13 @@ try {
                 'total_loss' => (float) $totalLoss,
                 'loss_trends' => $lossTrends,
                 'loss_users' => $lossUsers,
+                'loss_reasons' => $lossReasons,
+                'recent_losses' => $recentLosses
             ]);
         }
     } else {
         echo json_encode(['success' => false, 'message' => '不正なリクエストです。']);
     }
 } catch (PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'エラーが発生しました: '.$e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'エラーが発生しました: ' . $e->getMessage()]);
 }
