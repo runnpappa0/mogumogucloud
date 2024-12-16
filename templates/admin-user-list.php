@@ -280,30 +280,58 @@
             }
         }
 
-        // 弁当タイプ変更時のイベントリスナー追加
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('editBentoType').addEventListener('change', function(e) {
-                const riceAmountSelect = document.getElementById('editRiceAmount');
-                if (e.target.value === '冷凍') {
-                    riceAmountSelect.value = '';
-                    riceAmountSelect.disabled = true;
-                } else {
-                    riceAmountSelect.disabled = false;
+        // バリデーション関数
+        function validateEditForm() {
+            const bentoType = document.getElementById('editBentoType').value;
+            const riceAmount = document.getElementById('editRiceAmount').value;
+            const weekdays = Array.from(document.querySelectorAll('#editDays input:checked')).length;
+
+            // 曜日が選択されている場合のみお弁当関連のバリデーションを実行
+            if (weekdays > 0) {
+                // AランチまたはBランチでライスの量が未選択の場合
+                if ((bentoType === 'Aランチ' || bentoType === 'Bランチ') && !riceAmount) {
+                    alert('AランチまたはBランチを選択した場合、ライスの量を選択してください。');
+                    return false;
                 }
-            });
-        });
+            }
+            return true;
+        }
+
+        // 弁当タイプ変更時のライスの量フィールド制御
+        function handleEditBentoTypeChange(e) {
+            const riceAmountSelect = document.getElementById('editRiceAmount');
+            if (e.target.value === '冷凍') {
+                riceAmountSelect.value = '';
+                riceAmountSelect.disabled = true;
+            } else {
+                riceAmountSelect.disabled = false;
+                // 以前の選択が冷凍だった場合、デフォルト値を設定
+                if (riceAmountSelect.value === '') {
+                    riceAmountSelect.value = '普通盛';
+                }
+            }
+        }
 
         // ユーザー情報を保存
         async function saveUserData() {
-            const userId = document.getElementById('editUserId').value; // 修正箇所
+            // バリデーションチェック
+            if (!validateEditForm()) {
+                return;
+            }
+
+            const userId = document.getElementById('editUserId').value;
+            const bentoType = document.getElementById('editBentoType').value;
+            const riceAmount = document.getElementById('editRiceAmount').value;
+            const weekdays = Array.from(document.querySelectorAll('#editDays input:checked'))
+                .map(cb => cb.value);
+
             const data = {
-                id: userId, // 正しい user_id を送信
+                id: userId,
                 password: document.getElementById('editPassword').value,
                 name: document.getElementById('editName').value,
-                weekdays: Array.from(document.querySelectorAll('#editDays input:checked'))
-                    .map(cb => cb.value),
-                bento_type: document.getElementById('editBentoType').value,
-                rice_amount: document.getElementById('editRiceAmount').value,
+                weekdays: weekdays,
+                bento_type: bentoType,
+                rice_amount: bentoType === '冷凍' ? '' : riceAmount,
                 default_delivery_place: document.getElementById('editDeliveryPlace').value,
                 notes: document.getElementById('editNotes').value,
                 role: document.getElementById('editRole').value,
@@ -319,15 +347,17 @@
                     body: JSON.stringify(data)
                 });
                 const result = await response.json();
+
                 if (result.success) {
                     alert('ユーザー情報が更新されました。');
-                    fetchUserList(); // 更新後にリストをリロード
+                    fetchUserList();
                     document.querySelector('#editUserModal .btn-close').click();
                 } else {
                     alert(result.message || 'ユーザー情報の更新に失敗しました。');
                 }
             } catch (error) {
                 console.error('ユーザー情報更新中にエラーが発生しました:', error);
+                alert('ユーザー情報の更新中にエラーが発生しました。');
             }
         }
 
@@ -353,10 +383,33 @@
             }
         }
 
-        // 初期ロード
         document.addEventListener('DOMContentLoaded', () => {
+            // 既存のイベントリスナー
             loadLayout();
             fetchUserList();
+
+            // お弁当タイプ変更時のイベントリスナー
+            const editBentoTypeSelect = document.getElementById('editBentoType');
+            if (editBentoTypeSelect) {
+                editBentoTypeSelect.removeEventListener('change', handleEditBentoTypeChange);
+                editBentoTypeSelect.addEventListener('change', handleEditBentoTypeChange);
+            }
+
+            // 編集モーダルが開かれるたびに初期状態を設定
+            const editModal = document.getElementById('editUserModal');
+            if (editModal) {
+                editModal.addEventListener('shown.bs.modal', () => {
+                    const bentoType = document.getElementById('editBentoType').value;
+                    const riceAmountSelect = document.getElementById('editRiceAmount');
+
+                    if (bentoType === '冷凍') {
+                        riceAmountSelect.value = '';
+                        riceAmountSelect.disabled = true;
+                    } else {
+                        riceAmountSelect.disabled = false;
+                    }
+                });
+            }
         });
     </script>
 </body>

@@ -132,6 +132,48 @@
             }
         }
 
+        // フォームのバリデーション
+        function validateForm() {
+            const bentoType = document.getElementById('addBentoType').value;
+            const riceAmount = document.getElementById('addRiceAmount').value;
+            const weekdays = Array.from(document.querySelectorAll('#addDays input:checked')).length;
+
+            // 曜日が選択されている場合のみお弁当関連のバリデーションを実行
+            if (weekdays > 0) {
+                // お弁当タイプが選択されているか確認
+                if (!bentoType) {
+                    alert('お弁当が必要な曜日を選択した場合、お弁当タイプを選択してください。');
+                    return false;
+                }
+
+                // AランチまたはBランチの場合、ライスの量は必須
+                if ((bentoType === 'Aランチ' || bentoType === 'Bランチ') && !riceAmount) {
+                    alert('AランチまたはBランチの場合、ライスの量を選択してください。');
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        // お弁当タイプの変更時にライスの量フィールドを制御
+        function handleBentoTypeChange() {
+            const bentoType = document.getElementById('addBentoType').value;
+            const riceAmountSelect = document.getElementById('addRiceAmount');
+
+            if (bentoType === '冷凍') {
+                riceAmountSelect.value = '';
+                riceAmountSelect.disabled = true;
+            } else {
+                riceAmountSelect.disabled = false;
+                // AランチまたはBランチが選択された場合、デフォルト値を設定
+                if (bentoType === 'Aランチ' || bentoType === 'Bランチ') {
+                    if (!riceAmountSelect.value) {
+                        riceAmountSelect.value = '普通盛';
+                    }
+                }
+            }
+        }
+
         // フォーム送信処理
         async function handleSubmit(event) {
             event.preventDefault();
@@ -154,6 +196,11 @@
                 return;
             }
 
+            // フォームバリデーション
+            if (!validateForm()) {
+                return;
+            }
+
             // 送信データの構造
             const data = {
                 username,
@@ -162,7 +209,7 @@
                 role,
                 weekdays: weekdays.length > 0 ? weekdays : null,
                 bento_type: weekdays.length > 0 && bentoType ? bentoType : null,
-                rice_amount: weekdays.length > 0 && riceAmount ? riceAmount : null,
+                rice_amount: weekdays.length > 0 && riceAmount && bentoType !== '冷凍' ? riceAmount : null,
                 default_delivery_place: deliveryPlace,
                 notes: weekdays.length > 0 ? notes : null,
                 can_change_delivery: canChangeDelivery === "1"
@@ -197,9 +244,12 @@
             document.getElementById('generatePassword').addEventListener('click', generateRandomPassword);
             document.getElementById('togglePassword').addEventListener('click', togglePasswordVisibility);
             document.getElementById('addUserForm').addEventListener('submit', handleSubmit);
+            document.getElementById('addBentoType').addEventListener('change', handleBentoTypeChange);
 
             // 初回パスワード生成
             generateRandomPassword();
+            // 初期状態のお弁当タイプに応じたライスの量フィールドの制御
+            handleBentoTypeChange();
         });
     </script>
 </body>

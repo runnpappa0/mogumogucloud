@@ -618,8 +618,14 @@ async function fetchOrderChangeHistory() {
         const historyTableBody = document.querySelector('#orderChangeHistoryBody');
         historyTableBody.innerHTML = '';
 
+        // テーブルのタイトルを更新
+        const historyTitle = document.querySelector('h3');
+        if (historyTitle) {
+            historyTitle.textContent = '注文変更履歴';
+        }
+
         if (data.changes.length === 0) {
-            historyTableBody.innerHTML = '<tr><td colspan="6">本日の変更履歴はありません。</td></tr>';
+            historyTableBody.innerHTML = '<tr><td colspan="6">変更履歴はありません。</td></tr>';
             return;
         }
 
@@ -628,7 +634,7 @@ async function fetchOrderChangeHistory() {
                 <tr>
                     <td>${index + 1}</td>
                     <td>${change.user_name}</td>
-                    <td>${change.changer_name} </td>
+                    <td>${change.changer_name}</td>
                     <td>${change.action}</td>
                     <td>${formatChangeDetail(change.action, change.change_detail)}</td>
                     <td>${change.change_time}</td>
@@ -638,7 +644,8 @@ async function fetchOrderChangeHistory() {
         });
     } catch (error) {
         console.error('注文変更履歴取得中にエラーが発生しました:', error);
-        alert(error.message || '注文変更履歴の取得に失敗しました。');
+        const historyTableBody = document.querySelector('#orderChangeHistoryBody');
+        historyTableBody.innerHTML = '<tr><td colspan="6">エラーが発生しました。</td></tr>';
     }
 }
 

@@ -1,6 +1,10 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../common/DateTimeUtils.php';
 require_once '../db.php';
+
+use MoguMogu\Common\DateTimeUtils;
 
 header('Content-Type: application/json');
 
@@ -128,8 +132,12 @@ try {
 
         echo json_encode(['success' => true, 'message' => '変更を処理しました。']);
     } elseif ($method === 'GET' && $action === 'fetch_order_changes') {
+        // 対象日付を取得（15:00を境界とする）
+        $targetDate = DateTimeUtils::getTargetDate();
+
+        // 注文変更履歴を取得
         $stmt = $db->prepare("
-            SELECT 
+        SELECT 
                 ocl.changer_id,
                 c.name AS changer_name,
                 ocl.user_id,
@@ -140,10 +148,11 @@ try {
             FROM order_change_logs AS ocl
             JOIN users AS c ON ocl.changer_id = c.id
             JOIN users AS u ON ocl.user_id = u.id
-            WHERE DATE(ocl.change_time) = CURDATE()
+            JOIN bento_orders AS bo ON ocl.order_id = bo.id
+            WHERE bo.order_date = :target_date
             ORDER BY ocl.change_time DESC
         ");
-        $stmt->execute();
+        $stmt->execute([':target_date' => $targetDate]);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['success' => true, 'changes' => $logs]);
