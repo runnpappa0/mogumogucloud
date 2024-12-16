@@ -650,13 +650,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchUserList();
     fetchOrderChangeHistory();
 
-    // 30秒ごとに自動更新
-    setInterval(() => {
-        fetchOrderCounts();
-        fetchOrderDetails();
-        fetchOrderChangeHistory();
-    }, 30000);
-
     const selectAllCheckbox = document.getElementById("selectAll");
 
     if (selectAllCheckbox) {
