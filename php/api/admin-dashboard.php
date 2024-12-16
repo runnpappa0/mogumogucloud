@@ -1,6 +1,10 @@
 <?php
 session_start();
-require_once '../db.php';
+require_once __DIR__ . '/../config/constants.php';
+require_once __DIR__ . '/../common/DateTimeUtils.php';
+require_once __DIR__ . '/../db.php';
+
+use MoguMogu\Common\DateTimeUtils;
 
 header('Content-Type: application/json');
 
@@ -36,8 +40,11 @@ try {
     $db = getDbConnection();
 
     if ($method === 'GET') {
+        // 対象日付を取得（15:00以降は翌日の注文を表示）
+        $targetDate = DateTimeUtils::getTargetDate();
+
         if ($action === 'fetch_order_counts') {
-            // 配達先別の必要発注数を取得
+            // 配達先別の必要発注数を取得（日付を動的に設定）
             $query = "
                 SELECT 
                     delivery_place,
@@ -45,15 +52,17 @@ try {
                     rice_amount,
                     COUNT(*) AS count
                 FROM bento_orders
-                WHERE order_date = CURDATE()
+                WHERE order_date = :target_date
                 GROUP BY delivery_place, bento_type, rice_amount
             ";
             $stmt = $db->prepare($query);
-            $stmt->execute();
+            $stmt->execute([':target_date' => $targetDate]);
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // データ初期化
+            // レスポンスデータに日付情報を追加
             $data = [
+                'target_date' => $targetDate,
+                'formatted_date' => DateTimeUtils::formatTargetDate($targetDate),
                 'facility_inside' => [],
                 'facility_outside' => [],
                 'frozen' => ['facility_inside' => 0, 'facility_outside' => 0],
@@ -77,7 +86,7 @@ try {
 
             echo json_encode(['success' => true, 'data' => $data]);
         } elseif ($action === 'fetch_orders') {
-            // 注文内訳を取得
+            // 注文内訳を取得（日付を動的に設定）
             $query = "
                 SELECT 
                     bo.id AS order_id,
@@ -88,7 +97,7 @@ try {
                     bo.status
                 FROM bento_orders AS bo
                 JOIN users AS u ON bo.user_id = u.id
-                WHERE bo.order_date = CURDATE()
+                WHERE bo.order_date = :target_date
                 ORDER BY 
                     CASE u.role 
                         WHEN '利用者' THEN 1
@@ -100,25 +109,18 @@ try {
                         WHEN '施設外' THEN 2 
                         ELSE 3 
                     END,
-                    CASE bo.bento_type
-                        WHEN 'Aランチ' THEN 1
-                        WHEN 'Bランチ' THEN 2
-                        WHEN '冷凍' THEN 3
-                    END,
-                    CASE bo.rice_amount
-                        WHEN '大盛' THEN 1
-                        WHEN '普通盛' THEN 2
-                        WHEN '半ライス' THEN 3
-                        WHEN 'おかずのみ' THEN 4
-                        ELSE 5
-                    END,
                     u.name ASC
             ";
             $stmt = $db->prepare($query);
-            $stmt->execute();
+            $stmt->execute([':target_date' => $targetDate]);
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            echo json_encode(['success' => true, 'orders' => $orders]);
+            echo json_encode([
+                'success' => true, 
+                'orders' => $orders,
+                'target_date' => $targetDate,
+                'formatted_date' => DateTimeUtils::formatTargetDate($targetDate)
+            ]);
         } elseif ($action === 'fetch_users') {
             // ユーザーリストを取得
             $query = "
@@ -162,6 +164,8 @@ try {
             echo json_encode(['success' => true, 'order' => $order]);
         }
     } elseif ($method === 'POST') {
+        $targetDate = DateTimeUtils::getTargetDate();
+
         if ($action === 'add_order') {
             // 注文を追加
             $input = json_decode(file_get_contents('php://input'), true);
@@ -176,15 +180,18 @@ try {
 
                 // 注文を追加
                 $query = "
-                    INSERT INTO bento_orders (user_id, bento_type, rice_amount, delivery_place, order_date)
-                    VALUES (:user_id, :bento_type, :rice_amount, :delivery_place, CURDATE())
+                    INSERT INTO bento_orders 
+                    (user_id, bento_type, rice_amount, delivery_place, order_date)
+                    VALUES 
+                    (:user_id, :bento_type, :rice_amount, :delivery_place, :target_date)
                 ";
                 $stmt = $db->prepare($query);
                 $stmt->execute([
                     ':user_id' => $input['user_id'],
                     ':bento_type' => $input['bento_type'],
                     ':rice_amount' => $input['rice_amount'] ?? null,
-                    ':delivery_place' => $input['delivery_place']
+                    ':delivery_place' => $input['delivery_place'],
+                    ':target_date' => $targetDate
                 ]);
 
                 $orderId = $db->lastInsertId();

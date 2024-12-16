@@ -1,7 +1,17 @@
 <?php
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
+
+require_once __DIR__ . '/../php/config/constants.php';
+require_once __DIR__ . '/../php/common/DateTimeUtils.php';
+
+use MoguMogu\Common\DateTimeUtils;
+
+// 対象日付を取得
+$targetDate = DateTimeUtils::getTargetDate();
+$formattedDate = DateTimeUtils::formatTargetDate($targetDate);
 ?>
 
 <!DOCTYPE html>
@@ -24,7 +34,7 @@ error_reporting(E_ALL);
 
     <!-- メインコンテンツ -->
     <div class="container mt-5 pt-5">
-        <h1 class="mb-4">管理者ダッシュボード</h1>
+        <h1 class="mb-4"><?php echo htmlspecialchars($formattedDate); ?></h1>
 
         <!-- 配達先別発注数 -->
         <div class="mb-4">

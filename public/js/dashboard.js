@@ -603,9 +603,7 @@ function formatChangeDetail(action, detail) {
 // 当日の注文変更履歴を取得して表示
 async function fetchOrderChangeHistory() {
     try {
-        const response = await fetch('/php/api/process_order_changes.php?action=fetch_order_changes', {
-            method: 'GET',
-        });
+        const response = await fetch('/php/api/process_order_changes.php?action=fetch_order_changes');
 
         if (!response.ok) {
             throw new Error('サーバーエラーが発生しました。');
@@ -646,10 +644,18 @@ async function fetchOrderChangeHistory() {
 
 // 初期化処理
 document.addEventListener('DOMContentLoaded', () => {
-    fetchOrderCounts(); // 配達先別発注数を取得
-    fetchOrderDetails(); // 注文内訳を取得
-    fetchUserList(); // ユーザーリストを取得
+    loadLayout();
+    fetchOrderCounts();
+    fetchOrderDetails();
+    fetchUserList();
     fetchOrderChangeHistory();
+
+    // 30秒ごとに自動更新
+    setInterval(() => {
+        fetchOrderCounts();
+        fetchOrderDetails();
+        fetchOrderChangeHistory();
+    }, 30000);
 
     const selectAllCheckbox = document.getElementById("selectAll");
 
