@@ -16,6 +16,7 @@ if (!isset($_SESSION['user_id'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="/public/css/style.css">
+    <link rel="shortcut icon" href="../public/assets/favicon.png" type="image/x-icon">
 </head>
 
 <body>
