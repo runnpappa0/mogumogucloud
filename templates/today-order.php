@@ -1,3 +1,16 @@
+<?php
+require_once __DIR__ . '/../php/config/constants.php';  // 先に定数ファイルを読み込む
+require_once __DIR__ . '/../php/common/DateTimeUtils.php';
+require_once __DIR__ . '/../php/common/OrderDeadlineUtils.php';
+
+use MoguMogu\Common\DateTimeUtils;
+use MoguMogu\Common\OrderDeadlineUtils;
+use MoguMogu\Config\TimeConstants;
+
+$targetDate = DateTimeUtils::getTargetDate();
+$formattedDate = DateTimeUtils::formatTargetDate($targetDate);
+?>
+
 <!DOCTYPE html>
 <html lang="ja">
 
@@ -16,7 +29,12 @@
 
   <!-- メインコンテンツ -->
   <div class="container mt-5 pt-5">
-    <h1 class="mb-3">今日の注文</h1>
+    <h1 class="mb-3"><?php echo htmlspecialchars($formattedDate); ?></h1>
+
+    <!-- 締め切り時間表示エリア -->
+    <div id="deadlineInfo" class="alert alert-info mb-3">
+      <!-- 動的に追加される -->
+    </div>
 
     <!-- 変更可能回数表示エリア -->
     <div id="changeLimit" class="alert alert-info mb-3" style="display: none;">
@@ -122,8 +140,6 @@
       const addOrderBtn = document.getElementById('addOrderBtn');
       const saveNewOrderBtn = document.getElementById('saveNewOrder');
 
-      changeLimitDiv.style.display = 'block';
-
       if (remainingChanges > 0) {
         changeLimitDiv.className = 'alert alert-info mb-3';
         changeLimitDiv.innerHTML = `本日の注文変更可能回数：${remainingChanges}/2`;
@@ -145,6 +161,9 @@
       }
     }
 
+    // グローバル変数として注文編集可否を保持
+    let isOrderEditable = false;
+
     // 今日の注文を取得してフォームを描画
     async function fetchTodayOrder() {
       try {
@@ -153,13 +172,29 @@
         });
         const data = await response.json();
 
+        // 締め切り情報の表示
+        const deadlineInfo = document.getElementById("deadlineInfo");
+        const changeLimitDiv = document.getElementById("changeLimit");
+        isOrderEditable = data.isEditable;
+
+        if (data.isEditable) {
+          if (data.remainingTime) {
+            deadlineInfo.className = 'alert alert-info mb-3';
+            deadlineInfo.innerHTML = `注文変更締め切りまで残り：${data.remainingTime.hours}時間${data.remainingTime.minutes}分`;
+            // 編集可能な場合のみ変更可能回数を表示
+            updateChangeLimitDisplay(data.remainingChanges);
+            changeLimitDiv.style.display = 'block';
+          }
+        } else {
+          deadlineInfo.className = 'alert alert-danger mb-3';
+          deadlineInfo.innerHTML = '注文の変更締め切り時間を過ぎています';
+          // 締め切り時間を過ぎている場合は変更可能回数を非表示
+          changeLimitDiv.style.display = 'none';
+          disableAllOrderControls();
+        }
+
         const orderContent = document.getElementById("orderContent");
         const noOrder = document.getElementById("noOrder");
-
-        // 変更回数表示を更新
-        if (data.remainingChanges !== undefined) {
-          updateChangeLimitDisplay(data.remainingChanges);
-        }
 
         if (data.success) {
           // 注文が存在する場合、編集フォームを表示
@@ -223,6 +258,10 @@
               deliveryPlace.checked = true;
             }
           }
+
+          if (!data.isEditable) {
+            disableAllOrderControls();
+          }
         } else {
           // 注文が存在しない場合の処理
           orderContent.innerHTML = "";
@@ -242,9 +281,16 @@
         alert("エラーが発生しました。もう一度お試しください。");
       }
     }
+
     // 注文を変更する関数
     async function handleSubmitOrder(event) {
       event.preventDefault();
+
+      if (!isOrderEditable) {
+        alert('注文の変更締め切り時間を過ぎています。');
+        return;
+      }
+
       try {
         const bentoType = document.getElementById("bentoType").value;
         const riceAmount = document.getElementById("riceAmount").value;
@@ -314,6 +360,11 @@
 
     // 新規注文を保存する関数
     async function handleAddOrder() {
+      if (!isOrderEditable) {
+        alert('注文の変更締め切り時間を過ぎています。');
+        return;
+      }
+
       try {
         const bentoType = document.getElementById("newBentoType").value;
         const riceAmount = document.getElementById("newRiceAmount").value;
@@ -413,11 +464,55 @@
       }
     }
 
+    // すべての注文関連コントロールを無効化する関数
+    function disableAllOrderControls() {
+      // 注文フォームの無効化
+      const orderForm = document.getElementById('orderForm');
+      if (orderForm) {
+        const formElements = orderForm.elements;
+        for (let i = 0; i < formElements.length; i++) {
+          formElements[i].disabled = true;
+        }
+      }
+
+      // 新規注文ボタンの無効化
+      const addOrderBtn = document.getElementById('addOrderBtn');
+      if (addOrderBtn) {
+        addOrderBtn.disabled = true;
+      }
+
+      // 新規注文モーダル内の要素も無効化
+      const addOrderForm = document.getElementById('addOrderForm');
+      if (addOrderForm) {
+        const modalElements = addOrderForm.elements;
+        for (let i = 0; i < modalElements.length; i++) {
+          modalElements[i].disabled = true;
+        }
+      }
+
+      // 保存ボタンの無効化
+      const saveNewOrderBtn = document.getElementById('saveNewOrder');
+      if (saveNewOrderBtn) {
+        saveNewOrderBtn.disabled = true;
+      }
+    }
+
     // イベントリスナーの設定
     document.addEventListener("DOMContentLoaded", () => {
       loadLayout();
       fetchTodayOrder();
       fetchMenuLinks();
+
+      // モーダルが開かれる前にチェック
+      const addOrderModal = document.getElementById('addOrderModal');
+      if (addOrderModal) {
+        addOrderModal.addEventListener('show.bs.modal', (event) => {
+          if (!isOrderEditable) {
+            event.preventDefault();
+            alert('注文の変更締め切り時間を過ぎています。');
+          }
+        });
+      }
 
       document.getElementById("confirmCancel").addEventListener("click", handleCancelOrder);
       document.getElementById("saveNewOrder").addEventListener("click", handleAddOrder);

@@ -1,6 +1,13 @@
 <?php
 session_start();
-require_once '../db.php';
+require_once __DIR__ . '/../config/constants.php';  // 先に定数ファイルを読み込む
+require_once __DIR__ . '/../db.php';
+require_once __DIR__ . '/../common/DateTimeUtils.php';
+require_once __DIR__ . '/../common/OrderDeadlineUtils.php';
+
+use MoguMogu\Common\DateTimeUtils;
+use MoguMogu\Common\OrderDeadlineUtils;
+use MoguMogu\Config\TimeConstants;
 
 header('Content-Type: application/json');
 
@@ -89,7 +96,12 @@ try {
 
     // today-order.php の GET メソッド処理部分
     if ($method === 'GET') {
-        $today = date('Y-m-d');
+        // 対象日付を取得
+        $targetDate = DateTimeUtils::getTargetDate();
+
+        // 注文の編集可否をチェック
+        $isEditable = OrderDeadlineUtils::isOrderEditable($targetDate);
+        $remainingTime = OrderDeadlineUtils::getRemainingTime($targetDate);
 
         // ユーザー情報を取得
         $userQuery = 'SELECT can_change_delivery, default_delivery_place FROM users WHERE id = :user_id';
@@ -100,39 +112,59 @@ try {
         // 注文情報を取得
         $query = 'SELECT * FROM bento_orders WHERE user_id = :user_id AND order_date = :order_date';
         $stmt = $db->prepare($query);
-        $stmt->execute([':user_id' => $user_id, ':order_date' => $today]);
+        $stmt->execute([':user_id' => $user_id, ':order_date' => $targetDate]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // 変更可能回数の情報を取得
+        $canChange = checkChangeLimit($db, $user_id);
         $query = 'SELECT daily_change_count, last_change_date FROM users WHERE id = :user_id';
         $stmt = $db->prepare($query);
         $stmt->execute([':user_id' => $user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // 日付が変わっていれば回数をリセット
+        // 残り変更回数を計算
         $remainingChanges = 2;
-        if ($user['last_change_date'] === $today) {
+        if ($user['last_change_date'] === date('Y-m-d')) {
             $remainingChanges = 2 - $user['daily_change_count'];
         }
 
+        // レスポンスを返す
         if ($order) {
             echo json_encode([
                 'success' => true,
                 'order' => $order,
                 'remainingChanges' => $remainingChanges,
+                'isEditable' => $isEditable && $canChange,
+                'remainingTime' => $remainingTime,
                 'user_can_change_delivery' => (bool)$userData['can_change_delivery'],
-                'default_delivery_place' => $userData['default_delivery_place']
+                'default_delivery_place' => $userData['default_delivery_place'],
+                'targetDate' => DateTimeUtils::formatTargetDate($targetDate)
             ]);
         } else {
             echo json_encode([
                 'success' => false,
-                'message' => '本日注文がありません。',
+                'message' => '注文がありません。',
                 'remainingChanges' => $remainingChanges,
+                'isEditable' => $isEditable && $canChange,
+                'remainingTime' => $remainingTime,
                 'user_can_change_delivery' => (bool)$userData['can_change_delivery'],
-                'default_delivery_place' => $userData['default_delivery_place']
+                'default_delivery_place' => $userData['default_delivery_place'],
+                'targetDate' => DateTimeUtils::formatTargetDate($targetDate)
             ]);
         }
     } elseif ($method === 'POST') {
+        $targetDate = DateTimeUtils::getTargetDate();
+        
+        // 編集可能かチェック
+        if (!OrderDeadlineUtils::isOrderEditable($targetDate)) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false, 
+                'message' => '注文の変更締め切り時間を過ぎています。'
+            ]);
+            exit;
+        }
+
         // 変更回数チェック
         if (!checkChangeLimit($db, $user_id)) {
             echo json_encode(['success' => false, 'message' => '本日の変更可能回数（2回）を超えています。']);
@@ -227,6 +259,18 @@ try {
             throw $e;
         }
     } elseif ($method === 'DELETE') {
+        $targetDate = DateTimeUtils::getTargetDate();
+        
+        // 編集可能かチェック
+        if (!OrderDeadlineUtils::isOrderEditable($targetDate)) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false, 
+                'message' => '注文の変更締め切り時間を過ぎています。'
+            ]);
+            exit;
+        }
+        
         // 変更回数チェック
         if (!checkChangeLimit($db, $user_id)) {
             echo json_encode(['success' => false, 'message' => '本日の変更可能回数（2回）を超えています。']);
