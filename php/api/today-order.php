@@ -182,7 +182,6 @@ try {
         $bento_type = $input['bento_type'];
         $rice_amount = $input['rice_amount'];
         $delivery_place = $input['delivery_place'];
-        $today = date('Y-m-d');
 
         try {
             $db->beginTransaction();
@@ -190,7 +189,7 @@ try {
             // 本日の注文が存在するか確認
             $query = 'SELECT * FROM bento_orders WHERE user_id = :user_id AND order_date = :order_date FOR UPDATE';
             $stmt = $db->prepare($query);
-            $stmt->execute([':user_id' => $user_id, ':order_date' => $today]);
+            $stmt->execute([':user_id' => $user_id, ':order_date' => $targetDate]);
             $existingOrder = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($existingOrder) {
@@ -235,7 +234,7 @@ try {
                 $stmt = $db->prepare($query);
                 $stmt->execute([
                     ':user_id' => $user_id,
-                    ':order_date' => $today,
+                    ':order_date' => $targetDate,
                     ':bento_type' => $bento_type,
                     ':rice_amount' => $rice_amount,
                     ':delivery_place' => $delivery_place,
@@ -281,10 +280,9 @@ try {
             $db->beginTransaction();
 
             // 注文をキャンセル
-            $today = date('Y-m-d');
             $query = 'SELECT * FROM bento_orders WHERE user_id = :user_id AND order_date = :order_date FOR UPDATE';
             $stmt = $db->prepare($query);
-            $stmt->execute([':user_id' => $user_id, ':order_date' => $today]);
+            $stmt->execute([':user_id' => $user_id, ':order_date' => $targetDate]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($order) {
