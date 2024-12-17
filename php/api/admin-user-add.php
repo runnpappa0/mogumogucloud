@@ -24,6 +24,10 @@ try {
 
     $db = getDbConnection();
 
+    // roleのバリデーション
+    $validRoles = ['利用者', 'スタッフ', '管理者'];
+    $role = in_array($input['role'], $validRoles, true) ? $input['role'] : '利用者';
+
     // usersテーブルに追加
     $userQuery = "INSERT INTO users (username, password, name, role, default_delivery_place, can_change_delivery) 
     VALUES (:username, :password, :name, :role, :default_delivery_place, :can_change_delivery)";
@@ -32,9 +36,11 @@ try {
         ':username' => $input['username'],
         ':password' => password_hash($input['password'], PASSWORD_DEFAULT),
         ':name' => $input['name'],
-        ':role' => $input['role'],
+        ':role' => $role,
         ':default_delivery_place' => $input['default_delivery_place'],
-        ':can_change_delivery' => $input['can_change_delivery']
+        ':can_change_delivery' => isset($input['can_change_delivery']) && $input['can_change_delivery'] !== ''
+            ? (int) $input['can_change_delivery']
+            : 0
     ]);
 
     $userId = $db->lastInsertId();
@@ -48,7 +54,7 @@ try {
         $detailsStmt = $db->prepare($detailsQuery);
         $detailsStmt->execute([
             ':user_id' => $userId,
-            ':weekdays' => implode(',', $input['weekdays']),
+            ':weekdays' => is_array($input['weekdays']) ? implode(',', $input['weekdays']) : null,
             ':bento_type' => $input['bento_type'],
             ':rice_amount' => $input['rice_amount'] ?? null,
             ':notes' => $input['notes'] ?? null
@@ -56,6 +62,6 @@ try {
     }
 
     echo json_encode(['success' => true]);
-} catch (PDOException $e) {
-    echo json_encode(['success' => false, 'message' => 'エラーが発生しました: ' . $e->getMessage()]);
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
