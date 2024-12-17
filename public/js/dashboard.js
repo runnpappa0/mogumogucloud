@@ -618,12 +618,6 @@ async function fetchOrderChangeHistory() {
         const historyTableBody = document.querySelector('#orderChangeHistoryBody');
         historyTableBody.innerHTML = '';
 
-        // テーブルのタイトルを更新
-        const historyTitle = document.querySelector('h3');
-        if (historyTitle) {
-            historyTitle.textContent = '注文変更履歴';
-        }
-
         if (data.changes.length === 0) {
             historyTableBody.innerHTML = '<tr><td colspan="6">変更履歴はありません。</td></tr>';
             return;
