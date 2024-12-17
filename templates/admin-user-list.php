@@ -104,6 +104,7 @@
                         <div class="mb-3">
                             <label for="editBentoType" class="form-label">お弁当タイプ</label>
                             <select id="editBentoType" class="form-select">
+                                <option value="">未選択</option>
                                 <option value="Aランチ">Aランチ</option>
                                 <option value="Bランチ">Bランチ</option>
                                 <option value="冷凍">冷凍</option>
@@ -280,7 +281,6 @@
             }
         }
 
-        // バリデーション関数
         function validateEditForm() {
             const bentoType = document.getElementById('editBentoType').value;
             const riceAmount = document.getElementById('editRiceAmount').value;
@@ -288,6 +288,11 @@
 
             // 曜日が選択されている場合のみお弁当関連のバリデーションを実行
             if (weekdays > 0) {
+                // お弁当タイプが未選択の場合
+                if (!bentoType) {
+                    alert('曜日を選択した場合、お弁当タイプを選択してください。');
+                    return false;
+                }
                 // AランチまたはBランチでライスの量が未選択の場合
                 if ((bentoType === 'Aランチ' || bentoType === 'Bランチ') && !riceAmount) {
                     alert('AランチまたはBランチを選択した場合、ライスの量を選択してください。');
@@ -297,15 +302,14 @@
             return true;
         }
 
-        // 弁当タイプ変更時のライスの量フィールド制御
         function handleEditBentoTypeChange(e) {
             const riceAmountSelect = document.getElementById('editRiceAmount');
-            if (e.target.value === '冷凍') {
+            if (e.target.value === '冷凍' || e.target.value === '') {
                 riceAmountSelect.value = '';
                 riceAmountSelect.disabled = true;
             } else {
                 riceAmountSelect.disabled = false;
-                // 以前の選択が冷凍だった場合、デフォルト値を設定
+                // 以前の選択が冷凍または未選択だった場合、デフォルト値を設定
                 if (riceAmountSelect.value === '') {
                     riceAmountSelect.value = '普通盛';
                 }
