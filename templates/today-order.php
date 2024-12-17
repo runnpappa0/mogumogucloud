@@ -46,7 +46,7 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
     </div>
 
     <div id="noOrder" class="text-center mt-4" style="display: none;">
-      <p>本日の注文がありません。</p>
+      <p>注文はありません。</p>
       <button id="addOrderBtn" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">注文を追加</button>
     </div>
   </div>
@@ -143,7 +143,7 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
 
       if (remainingChanges > 0) {
         changeLimitDiv.className = 'alert alert-info mb-3';
-        changeLimitDiv.innerHTML = `本日の注文変更可能回数：${remainingChanges}/2`;
+        changeLimitDiv.innerHTML = `注文変更可能回数：${remainingChanges}/2`;
 
         if (orderForm) {
           orderForm.querySelectorAll('button').forEach(btn => btn.disabled = false);
@@ -152,7 +152,7 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
         if (saveNewOrderBtn) saveNewOrderBtn.disabled = false;
       } else {
         changeLimitDiv.className = 'alert alert-warning mb-3';
-        changeLimitDiv.innerHTML = '本日の注文変更可能回数を超えました。変更が必要な場合は、電話でご連絡ください。';
+        changeLimitDiv.innerHTML = '注文変更可能回数を超えました。変更が必要な場合は、電話でご連絡ください。';
 
         if (orderForm) {
           orderForm.querySelectorAll('button').forEach(btn => btn.disabled = true);
