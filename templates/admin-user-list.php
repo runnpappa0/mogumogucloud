@@ -286,19 +286,18 @@
             const riceAmount = document.getElementById('editRiceAmount').value;
             const weekdays = Array.from(document.querySelectorAll('#editDays input:checked')).length;
 
-            // 曜日が選択されている場合のみお弁当関連のバリデーションを実行
-            if (weekdays > 0) {
-                // お弁当タイプが未選択の場合
-                if (!bentoType) {
-                    alert('曜日を選択した場合、お弁当タイプを選択してください。');
-                    return false;
-                }
-                // AランチまたはBランチでライスの量が未選択の場合
-                if ((bentoType === 'Aランチ' || bentoType === 'Bランチ') && !riceAmount) {
-                    alert('AランチまたはBランチを選択した場合、ライスの量を選択してください。');
-                    return false;
-                }
+            // 曜日選択がある場合のみ、お弁当タイプは必須
+            if (weekdays > 0 && !bentoType) {
+                alert('曜日を選択した場合、お弁当タイプを選択してください。');
+                return false;
             }
+
+            // お弁当タイプが選択されている場合のみ、ライスの量をチェック
+            if (bentoType && (bentoType === 'Aランチ' || bentoType === 'Bランチ') && !riceAmount) {
+                alert('AランチまたはBランチを選択した場合、ライスの量を選択してください。');
+                return false;
+            }
+
             return true;
         }
 

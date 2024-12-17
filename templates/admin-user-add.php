@@ -155,24 +155,19 @@
             return true;
         }
 
-        // お弁当タイプの変更時にライスの量フィールドを制御
-        function handleBentoTypeChange() {
-            const bentoType = document.getElementById('addBentoType').value;
+        // お弁当タイプ変更時のライスの量フィールド制御
+        document.getElementById('addBentoType').addEventListener('change', function(e) {
             const riceAmountSelect = document.getElementById('addRiceAmount');
-
-            if (bentoType === '冷凍') {
+            if (e.target.value === '冷凍' || e.target.value === '') {
                 riceAmountSelect.value = '';
                 riceAmountSelect.disabled = true;
             } else {
                 riceAmountSelect.disabled = false;
-                // AランチまたはBランチが選択された場合、デフォルト値を設定
-                if (bentoType === 'Aランチ' || bentoType === 'Bランチ') {
-                    if (!riceAmountSelect.value) {
-                        riceAmountSelect.value = '普通盛';
-                    }
+                if (riceAmountSelect.value === '') {
+                    riceAmountSelect.value = '普通盛';
                 }
             }
-        }
+        });
 
         // フォーム送信処理
         async function handleSubmit(event) {
@@ -183,12 +178,10 @@
             const password = document.getElementById('addPassword').value.trim();
             const name = document.getElementById('addName').value.trim();
             const weekdays = Array.from(document.querySelectorAll('#addDays input:checked')).map(cb => cb.value);
-            const bentoType = document.getElementById('addBentoType').value || null;
-            const riceAmount = document.getElementById('addRiceAmount').value || null;
-            const deliveryPlace = document.getElementById('addDeliveryPlace').value;
+            const bentoType = document.getElementById('addBentoType').value;
+            const riceAmount = document.getElementById('addRiceAmount').value;
             const notes = document.getElementById('addNotes').value.trim();
             const role = document.getElementById('addRole').value;
-            const canChangeDelivery = document.getElementById('addCanChangeDelivery').value;
 
             // 必須項目チェック
             if (!username || !password || !name) {
@@ -196,8 +189,15 @@
                 return;
             }
 
-            // フォームバリデーション
-            if (!validateForm()) {
+            // 曜日とお弁当タイプのバリデーション
+            if (weekdays.length > 0 && !bentoType) {
+                alert('曜日を選択した場合、お弁当タイプを選択してください。');
+                return;
+            }
+
+            // お弁当タイプとライスの量のバリデーション
+            if (bentoType && (bentoType === 'Aランチ' || bentoType === 'Bランチ') && !riceAmount) {
+                alert('AランチまたはBランチを選択した場合、ライスの量を選択してください。');
                 return;
             }
 
@@ -208,11 +208,9 @@
                 name,
                 role,
                 weekdays: weekdays.length > 0 ? weekdays : null,
-                bento_type: weekdays.length > 0 && bentoType ? bentoType : null,
-                rice_amount: weekdays.length > 0 && riceAmount && bentoType !== '冷凍' ? riceAmount : null,
-                default_delivery_place: deliveryPlace,
-                notes: weekdays.length > 0 ? notes : null,
-                can_change_delivery: canChangeDelivery === "1"
+                bento_type: bentoType || null,
+                rice_amount: bentoType ? riceAmount : null,
+                notes: notes || null
             };
 
             try {
