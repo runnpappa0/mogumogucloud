@@ -37,15 +37,14 @@ try {
   // 注文作成（クエリを修正）
   $query = "
       INSERT INTO bento_orders 
-          (user_id, order_date, bento_type, rice_amount, delivery_place, status, updated_by) 
+          (user_id, order_date, bento_type, rice_amount, delivery_place, status) 
       SELECT 
           u.id,
           :tomorrow,
           CASE WHEN :is_holiday_bento = 1 THEN '冷凍' ELSE cd.bento_type END,
           CASE WHEN :is_holiday_rice = 1 THEN NULL ELSE cd.rice_amount END,
           u.default_delivery_place,
-          NULL as status,
-          NULL as updated_by
+          NULL as status
       FROM users u
       JOIN contract_details cd ON u.id = cd.user_id
       WHERE 
