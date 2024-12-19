@@ -3,7 +3,7 @@ session_start();
 
 // ログイン済みの場合、遷移先を決定
 if (isset($_SESSION['user_id'])) {
-    $redirectUrl = ($_SESSION['role'] === '管理者') ? '/templates/admin-dashboard.php' : '/templates/today-order.php';
+    $redirectUrl = ($_SESSION['user_role'] === '管理者') ? '/templates/admin-dashboard.php' : '/templates/today-order.php';
     header("Location: $redirectUrl");
     exit;
 }
