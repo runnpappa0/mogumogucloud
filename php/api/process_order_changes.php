@@ -137,7 +137,7 @@ try {
 
         // 注文変更履歴を取得
         $stmt = $db->prepare("
-        SELECT 
+            SELECT 
                 ocl.changer_id,
                 c.name AS changer_name,
                 ocl.user_id,
@@ -148,11 +148,11 @@ try {
             FROM order_change_logs AS ocl
             JOIN users AS c ON ocl.changer_id = c.id
             JOIN users AS u ON ocl.user_id = u.id
-            JOIN bento_orders AS bo ON ocl.order_id = bo.id
-            WHERE bo.order_date = :target_date
+            LEFT JOIN bento_orders AS bo ON ocl.order_id = bo.id  -- LEFT JOINに変更
+            WHERE bo.order_date = :target_date OR bo.id IS NULL   -- NULLの場合も含める
             ORDER BY ocl.change_time DESC
         ");
-        $stmt->execute([':target_date' => $targetDate]);
+                $stmt->execute([':target_date' => $targetDate]);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['success' => true, 'changes' => $logs]);
