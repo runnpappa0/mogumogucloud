@@ -290,7 +290,7 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
                 <thead>
                     <tr>
                         <th>#</th>
-                        <th>注文者</th>
+                        <th>利用者</th>
                         <th>変更者</th>
                         <th>アクション</th>
                         <th>変更内容</th>
