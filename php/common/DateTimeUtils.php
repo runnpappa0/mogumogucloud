@@ -1,5 +1,4 @@
 <?php
-// php/common/DateTimeUtils.php
 namespace MoguMogu\Common;
 
 use MoguMogu\Config\TimeConstants;
@@ -13,9 +12,13 @@ class DateTimeUtils {
         ));
         
         if ($now >= $boundary) {
-            return date('Y-m-d', strtotime('+1 day'));
+            // 金曜日の場合
+            if ($now->format('w') === '5') {
+                return date('Y-m-d', strtotime('+3 day')); // 翌週月曜日
+            }
+            return date('Y-m-d', strtotime('+1 day')); // 翌日
         }
-        return date('Y-m-d');
+        return date('Y-m-d'); // 当日
     }
 
     public static function formatTargetDate(string $date): string {

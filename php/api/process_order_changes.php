@@ -136,6 +136,8 @@ try {
         $targetDate = DateTimeUtils::getTargetDate();
 
         // 注文変更履歴を取得
+        $targetDate = DateTimeUtils::getTargetDate();  // 15:00を境界とした日付を取得
+
         $stmt = $db->prepare("
             SELECT 
                 ocl.changer_id,
@@ -145,14 +147,20 @@ try {
                 ocl.action,
                 ocl.change_detail,
                 DATE_FORMAT(ocl.change_time, '%Y-%m-%d %H:%i') AS change_time
-            FROM order_change_logs AS ocl
-            JOIN users AS c ON ocl.changer_id = c.id
-            JOIN users AS u ON ocl.user_id = u.id
-            LEFT JOIN bento_orders AS bo ON ocl.order_id = bo.id  -- LEFT JOINに変更
-            WHERE bo.order_date = :target_date OR bo.id IS NULL   -- NULLの場合も含める
+            FROM order_change_logs ocl
+            JOIN users c ON ocl.changer_id = c.id
+            JOIN users u ON ocl.user_id = u.id
+            WHERE DATE(
+                CASE 
+                    WHEN TIME(ocl.change_time) >= '15:00' THEN DATE_ADD(ocl.change_time, INTERVAL 1 DAY)
+                    ELSE ocl.change_time 
+                END
+            ) = :target_date
             ORDER BY ocl.change_time DESC
         ");
-                $stmt->execute([':target_date' => $targetDate]);
+        $stmt->execute([
+            ':target_date' => $targetDate
+        ]);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['success' => true, 'changes' => $logs]);
