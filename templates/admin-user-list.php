@@ -218,7 +218,7 @@
             const query = event.target.value.toLowerCase();
             const rows = document.querySelectorAll('#userList tr');
             rows.forEach(row => {
-                const nameCell = row.querySelector('td:nth-child(3)');
+                const nameCell = row.querySelector('td:nth-child(2)');
                 if (nameCell && nameCell.textContent.toLowerCase().includes(query)) {
                     row.style.display = '';
                 } else {
