@@ -18,7 +18,7 @@
 
     <!-- メインコンテンツ -->
     <div class="container mt-5 pt-5">
-        <h1 class="mb-4">利用者管理</h1>
+        <h1 class="mb-4">ユーザー管理</h1>
 
         <!-- 検索フォーム -->
         <div class="mb-4">
