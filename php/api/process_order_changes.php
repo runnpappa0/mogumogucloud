@@ -152,8 +152,11 @@ try {
             JOIN users u ON ocl.user_id = u.id
             WHERE DATE(
                 CASE 
-                    WHEN TIME(ocl.change_time) >= '15:00' THEN DATE_ADD(ocl.change_time, INTERVAL 1 DAY)
-                    ELSE ocl.change_time 
+                    WHEN DAYOFWEEK(ocl.change_time) = 6 AND TIME(ocl.change_time) >= '15:00' 
+                        THEN DATE_ADD(ocl.change_time, INTERVAL 3 DAY)  -- 金曜日15:00以降は翌週月曜日
+                    WHEN TIME(ocl.change_time) >= '15:00' 
+                        THEN DATE_ADD(ocl.change_time, INTERVAL 1 DAY)  -- その他の15:00以降は翌日
+                    ELSE ocl.change_time  -- 15:00より前は当日
                 END
             ) = :target_date
             ORDER BY ocl.change_time DESC
