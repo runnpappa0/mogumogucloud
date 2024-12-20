@@ -44,7 +44,11 @@ try {
         $targetDate = DateTimeUtils::getTargetDate();
 
         if ($action === 'fetch_order_counts') {
-            // 配達先別の必要発注数を取得（日付を動的に設定）
+            // 対象日付を取得（金曜日15:00以降は翌週月曜日）
+            $targetDate = DateTimeUtils::getTargetDate();
+            $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
+
+            // 配達先別の必要発注数を取得
             $query = "
                 SELECT 
                     delivery_place,
@@ -55,36 +59,48 @@ try {
                 WHERE order_date = :target_date
                 GROUP BY delivery_place, bento_type, rice_amount
             ";
-            $stmt = $db->prepare($query);
-            $stmt->execute([':target_date' => $targetDate]);
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // レスポンスデータに日付情報を追加
-            $data = [
-                'target_date' => $targetDate,
-                'formatted_date' => DateTimeUtils::formatTargetDate($targetDate),
-                'facility_inside' => [],
-                'facility_outside' => [],
-                'frozen' => ['facility_inside' => 0, 'facility_outside' => 0],
-            ];
+            try {
+                $stmt = $db->prepare($query);
+                $stmt->execute([':target_date' => $targetDate]);
+                $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            foreach ($result as $row) {
-                $isFrozen = $row['bento_type'] === '冷凍';
+                // レスポンスデータの構造化
+                $data = [
+                    'target_date' => $targetDate,
+                    'formatted_date' => $formattedDate,
+                    'facility_inside' => [],
+                    'facility_outside' => [],
+                    'frozen' => ['facility_inside' => 0, 'facility_outside' => 0],
+                ];
 
-                // 配達先に基づく分類
-                $placeKey = $row['delivery_place'] === '施設内' ? 'facility_inside' : 'facility_outside';
+                foreach ($result as $row) {
+                    $isFrozen = $row['bento_type'] === '冷凍';
+                    $placeKey = $row['delivery_place'] === '施設内' ? 'facility_inside' : 'facility_outside';
 
-                if ($isFrozen) {
-                    $data['frozen'][$placeKey] += $row['count'];
-                } else {
-                    if (!isset($data[$placeKey][$row['bento_type']])) {
-                        $data[$placeKey][$row['bento_type']] = [];
+                    if ($isFrozen) {
+                        $data['frozen'][$placeKey] += $row['count'];
+                    } else {
+                        if (!isset($data[$placeKey][$row['bento_type']])) {
+                            $data[$placeKey][$row['bento_type']] = [];
+                        }
+                        $data[$placeKey][$row['bento_type']][$row['rice_amount']] = $row['count'];
                     }
-                    $data[$placeKey][$row['bento_type']][$row['rice_amount']] = $row['count'];
                 }
-            }
 
-            echo json_encode(['success' => true, 'data' => $data]);
+                echo json_encode([
+                    'success' => true,
+                    'data' => $data,
+                    'target_date' => $targetDate,
+                    'formatted_date' => $formattedDate
+                ]);
+            } catch (PDOException $e) {
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'データベースエラーが発生しました。',
+                    'error' => $e->getMessage()
+                ]);
+            }
         } elseif ($action === 'fetch_orders') {
             // 注文内訳を取得（日付を動的に設定）
             $query = "
@@ -116,7 +132,7 @@ try {
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             echo json_encode([
-                'success' => true, 
+                'success' => true,
                 'orders' => $orders,
                 'target_date' => $targetDate,
                 'formatted_date' => DateTimeUtils::formatTargetDate($targetDate)

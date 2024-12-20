@@ -1,8 +1,8 @@
-// 配達先別発注数を取得して表示
+// 配達先別発注数の取得と表示
 async function fetchOrderCounts() {
     try {
         const response = await fetch('/php/api/admin-dashboard.php?action=fetch_order_counts');
-        const text = await response.text(); // 生のレスポンスを取得
+        const text = await response.text();
 
         // 空レスポンスチェック
         if (!text.trim()) {
@@ -14,6 +14,12 @@ async function fetchOrderCounts() {
 
         if (!data.success) {
             throw new Error(data.message || '配達先別発注数の取得に失敗しました。');
+        }
+
+        // 日付表示の更新
+        const dateHeader = document.querySelector('h1');
+        if (dateHeader && data.data.formatted_date) {
+            dateHeader.textContent = data.data.formatted_date;
         }
 
         const { facility_inside, facility_outside, frozen } = data.data;
@@ -29,6 +35,12 @@ async function fetchOrderCounts() {
 
     } catch (error) {
         console.error('配達先別発注数の取得中にエラーが発生しました:', error);
+        if (error.message.includes('認証')) {
+            alert('セッションが切れました。再度ログインしてください。');
+            window.location.href = '/login.php';
+            return;
+        }
+        alert('データの取得に失敗しました。しばらく経ってから再度お試しください。');
     }
 }
 
@@ -218,33 +230,55 @@ async function fetchOrderDetails() {
         orderTableBody.innerHTML = ''; // 初期化
 
         if (data.orders.length === 0) {
-            orderTableBody.innerHTML = '<tr><td colspan="7">本日注文がありません。</td></tr>';
+            const formattedDate = data.formatted_date || '対象日';
+            orderTableBody.innerHTML = `<tr><td colspan="7">${formattedDate}はありません。</td></tr>`;
             return;
         }
 
         // 各注文をテーブルに追加
         data.orders.forEach(order => {
+            const statusBadgeClass = order.status === '消費済み' ? 'bg-success' : 'bg-warning';
+            const statusHtml = order.status ?
+                `<span class="badge ${statusBadgeClass}">${order.status}</span>` : '';
+
             orderTableBody.innerHTML += `
-            <tr>
-                <td><input type="checkbox" class="orderCheckbox" data-order-id="${order.order_id}"></td>
-                <td>${order.user_name}</td>
-                <td>${order.bento_type}</td>
-                <td>${order.rice_amount || '-'}</td>
-                <td>${order.delivery_place}</td>
-                <td class="status-cell">${order.status ? `<span class="badge ${order.status === '消費済み' ? 'bg-success' : 'bg-warning'}">${order.status}</span>` : ''}</td>
-                <td>
-                    <button class="btn btn-sm btn-primary edit-order-btn" data-order-id="${order.order_id}">編集</button>
-                    <button class="btn btn-sm btn-danger cancel-order-btn" data-order-id="${order.order_id}">キャンセル</button>
-                </td>
-            </tr>
-        `;
+                <tr>
+                    <td><input type="checkbox" class="orderCheckbox" data-order-id="${order.order_id}"></td>
+                    <td>${escapeHtml(order.user_name)}</td>
+                    <td>${escapeHtml(order.bento_type)}</td>
+                    <td>${escapeHtml(order.rice_amount || '-')}</td>
+                    <td>${escapeHtml(order.delivery_place)}</td>
+                    <td class="status-cell">${statusHtml}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary edit-order-btn" data-order-id="${order.order_id}">編集</button>
+                        <button class="btn btn-sm btn-danger cancel-order-btn" data-order-id="${order.order_id}">キャンセル</button>
+                    </td>
+                </tr>
+            `;
         });
 
     } catch (error) {
         console.error('注文内訳取得中にエラーが発生しました:', error);
         const orderTableBody = document.querySelector('#orderTableBody');
-        orderTableBody.innerHTML = '<tr><td colspan="7">エラーが発生しました。</td></tr>';
+        const errorMessage = error.message.includes('認証') ?
+            'セッションが切れました。再度ログインしてください。' :
+            'データの取得に失敗しました。';
+        orderTableBody.innerHTML = `<tr><td colspan="7">${errorMessage}</td></tr>`;
+
+        if (error.message.includes('認証')) {
+            setTimeout(() => {
+                window.location.href = '/login.php';
+            }, 2000);
+        }
     }
+}
+
+// HTML文字列のエスケープ処理
+function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -643,22 +677,24 @@ async function fetchOrderChangeHistory() {
     }
 }
 
-// 初期化処理
+// DOMContentLoaded 時の初期化処理
 document.addEventListener('DOMContentLoaded', () => {
     loadLayout();
-    fetchOrderCounts();
-    fetchOrderDetails();
-    fetchUserList();
-    fetchOrderChangeHistory();
+    Promise.all([
+        fetchOrderCounts(),
+        fetchOrderDetails(),
+        fetchUserList(),
+        fetchOrderChangeHistory()
+    ]).catch(error => {
+        console.error('初期化中にエラーが発生しました:', error);
+    });
 
+    // 全選択チェックボックスの設定
     const selectAllCheckbox = document.getElementById("selectAll");
-
     if (selectAllCheckbox) {
         selectAllCheckbox.addEventListener("change", function () {
             const checkboxes = document.querySelectorAll(".orderCheckbox");
             checkboxes.forEach(checkbox => checkbox.checked = this.checked);
         });
-    } else {
-        console.error("selectAll チェックボックスが見つかりません。");
     }
 });
