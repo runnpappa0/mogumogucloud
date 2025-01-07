@@ -61,15 +61,18 @@ try {
                         echo json_encode(['success' => false, 'message' => '必須データが不足しています。']);
                         exit;
                     }
+                    // CURDATE()ではなくDateTimeUtilsで取得した日付を使用
+                    $targetDate = DateTimeUtils::getTargetDate();
                     $stmt = $db->prepare("
-                        INSERT INTO bento_orders (user_id, bento_type, rice_amount, delivery_place, order_date)
-                        VALUES (:user_id, :bento_type, :rice_amount, :delivery_place, CURDATE())
-                    ");
+                            INSERT INTO bento_orders (user_id, bento_type, rice_amount, delivery_place, order_date)
+                            VALUES (:user_id, :bento_type, :rice_amount, :delivery_place, :order_date)
+                        ");
                     $stmt->execute([
                         ':user_id' => $userId,
                         ':bento_type' => $bentoType,
                         ':rice_amount' => $riceAmount,
-                        ':delivery_place' => $deliveryPlace
+                        ':delivery_place' => $deliveryPlace,
+                        ':order_date' => $targetDate
                     ]);
                     $changeDetail = "新たに注文を追加";
                     break;
@@ -132,12 +135,10 @@ try {
 
         echo json_encode(['success' => true, 'message' => '変更を処理しました。']);
     } elseif ($method === 'GET' && $action === 'fetch_order_changes') {
-        // 対象日付を取得（15:00を境界とする）
+        // 対象日付を取得
         $targetDate = DateTimeUtils::getTargetDate();
 
         // 注文変更履歴を取得
-        $targetDate = DateTimeUtils::getTargetDate();  // 15:00を境界とした日付を取得
-
         $stmt = $db->prepare("
             SELECT 
                 ocl.changer_id,
@@ -148,21 +149,36 @@ try {
                 ocl.change_detail,
                 DATE_FORMAT(ocl.change_time, '%Y-%m-%d %H:%i') AS change_time
             FROM order_change_logs ocl
+            LEFT JOIN bento_orders bo ON ocl.order_id = bo.id
             JOIN users c ON ocl.changer_id = c.id
             JOIN users u ON ocl.user_id = u.id
-            WHERE DATE(
-                CASE 
-                    WHEN DAYOFWEEK(ocl.change_time) = 6 AND TIME(ocl.change_time) >= '15:00' 
-                        THEN DATE_ADD(ocl.change_time, INTERVAL 3 DAY)  -- 金曜日15:00以降は翌週月曜日
-                    WHEN TIME(ocl.change_time) >= '15:00' 
-                        THEN DATE_ADD(ocl.change_time, INTERVAL 1 DAY)  -- その他の15:00以降は翌日
-                    ELSE ocl.change_time  -- 15:00より前は当日
-                END
-            ) = :target_date
+            WHERE 
+                bo.order_date = :target_date 
+                OR 
+                (
+                    ocl.order_id IS NULL 
+                    AND DATE(
+                        CASE 
+                            WHEN (DAYOFWEEK(ocl.change_time) = 6 AND TIME(ocl.change_time) >= '15:00') 
+                                THEN DATE_ADD(ocl.change_time, INTERVAL 3 DAY)
+                            WHEN DAYOFWEEK(ocl.change_time) = 7 
+                                THEN DATE_ADD(ocl.change_time, INTERVAL 2 DAY)
+                            WHEN DAYOFWEEK(ocl.change_time) = 1 
+                                THEN DATE_ADD(ocl.change_time, INTERVAL 1 DAY)
+                            WHEN DAYOFWEEK(ocl.change_time) = 2 AND TIME(ocl.change_time) < '15:00' 
+                                THEN ocl.change_time
+                            WHEN TIME(ocl.change_time) >= '15:00' 
+                                THEN DATE_ADD(ocl.change_time, INTERVAL 1 DAY)
+                            ELSE ocl.change_time
+                        END
+                    ) = :target_date_2
+                )
             ORDER BY ocl.change_time DESC
         ");
+
         $stmt->execute([
-            ':target_date' => $targetDate
+            ':target_date' => $targetDate,
+            ':target_date_2' => $targetDate
         ]);
         $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

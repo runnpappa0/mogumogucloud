@@ -30,6 +30,12 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
 
   <!-- メインコンテンツ -->
   <div class="container mt-5 pt-5">
+    <!-- ユーザー名の表示を追加 -->
+    <p class="mb-4">
+      <i class="bi bi-person-circle me-2"></i>
+      <span id="userName"></span>さん、ようこそ
+    </p>
+
     <h1 class="mb-3"><?php echo htmlspecialchars($formattedDate); ?></h1>
 
     <!-- 締め切り時間表示エリア -->
@@ -172,6 +178,16 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
           method: "GET",
         });
         const data = await response.json();
+
+        // ユーザー名の表示
+        const userNameElement = document.getElementById('userName');
+        if (userNameElement && data.user_name) {
+          userNameElement.textContent = data.user_name;
+        }
+
+        // 日付表示の更新
+        document.querySelector('h1').textContent = data.targetDate;
+        document.title = `もぐもぐクラウド - ${data.targetDate}`;
 
         // 締め切り情報の表示
         const deadlineInfo = document.getElementById("deadlineInfo");
@@ -447,13 +463,20 @@ $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
                           `;
                       } else {
                           return ` <
-                              <div>
-                                  <a href="${link.link_url}" target="_blank" class="text-decoration-none">
-                                      ${link.bento_type}のメニューを表示
-                                      <i class="bi bi-box-arrow-up-right ms-1"></i>
-                                  </a>
-                              </div>
-                          `;
+          <
+          div >
+          <
+          a href = "${link.link_url}"
+          target = "_blank"
+          class = "text-decoration-none" >
+          $ {
+            link.bento_type
+          }
+          のメニューを表示 <
+          i class = "bi bi-box-arrow-up-right ms-1" > < /i> < /
+          a > <
+          /div>
+          `;
                       }
                   }).join('')}
               </div>

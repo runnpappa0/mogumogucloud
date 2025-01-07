@@ -112,6 +112,33 @@
             document.getElementById("footer").innerHTML = await fetch("/templates/layouts/footer.php").then(res => res.text());
         }
 
+        // 現在の契約内容を取得して設定する関数
+        async function fetchAndSetCurrentContract() {
+            try {
+                const response = await fetch('/php/api/contract-change.php?action=current_contract');
+                const data = await response.json();
+
+                if (data.success && data.contract) {
+                    // 曜日の設定（weekdaysが存在する場合のみ）
+                    if (data.contract.weekdays) {
+                        const weekdays = data.contract.weekdays.split(',');
+                        weekdays.forEach(day => {
+                            const checkbox = document.querySelector(`.weekday-checkbox[value="${day}"]`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+
+                    // ライスの量の設定（rice_amountが存在する場合のみ）
+                    if (data.contract.rice_amount) {
+                        const riceSelect = document.getElementById('riceAmount');
+                        riceSelect.value = data.contract.rice_amount;
+                    }
+                }
+            } catch (error) {
+                console.error('契約内容の取得中にエラーが発生しました:', error);
+            }
+        }
+
         document.getElementById('noBento').addEventListener('change', function() {
             const isChecked = this.checked;
             const weekdayCheckboxes = document.querySelectorAll('.weekday-checkbox');
@@ -204,6 +231,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadLayout();
             fetchContractChangeHistory();
+            fetchAndSetCurrentContract();
             document.getElementById('contractForm').addEventListener('submit', submitContractChange);
         });
     </script>

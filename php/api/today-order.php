@@ -99,12 +99,22 @@ try {
         // 対象日付を取得
         $targetDate = DateTimeUtils::getTargetDate();
 
+        // 現在の日時を取得
+        $now = new DateTime();
+        $currentWeekday = (int)$now->format('w');
+        $currentHour = (int)$now->format('H');
+
+        // 月曜日の15:00より前の場合は当日の注文を表示
+        if ($currentWeekday === 1 && $currentHour < 15) {
+            $targetDate = date('Y-m-d'); // 当日
+        }
+
         // 注文の編集可否をチェック
         $isEditable = OrderDeadlineUtils::isOrderEditable($targetDate);
         $remainingTime = OrderDeadlineUtils::getRemainingTime($targetDate);
 
         // ユーザー情報を取得
-        $userQuery = 'SELECT can_change_delivery, default_delivery_place FROM users WHERE id = :user_id';
+        $userQuery = 'SELECT name, can_change_delivery, default_delivery_place FROM users WHERE id = :user_id';
         $stmt = $db->prepare($userQuery);
         $stmt->execute([':user_id' => $user_id]);
         $userData = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -132,6 +142,7 @@ try {
         if ($order) {
             echo json_encode([
                 'success' => true,
+                'user_name' => $userData['name'],
                 'order' => $order,
                 'remainingChanges' => $remainingChanges,
                 'isEditable' => $isEditable && $canChange,
@@ -144,6 +155,7 @@ try {
             echo json_encode([
                 'success' => false,
                 'message' => '注文がありません。',
+                'user_name' => $userData['name'],
                 'remainingChanges' => $remainingChanges,
                 'isEditable' => $isEditable && $canChange,
                 'remainingTime' => $remainingTime,
@@ -154,12 +166,12 @@ try {
         }
     } elseif ($method === 'POST') {
         $targetDate = DateTimeUtils::getTargetDate();
-        
+
         // 編集可能かチェック
         if (!OrderDeadlineUtils::isOrderEditable($targetDate)) {
             http_response_code(403);
             echo json_encode([
-                'success' => false, 
+                'success' => false,
                 'message' => '注文の変更締め切り時間を過ぎています。'
             ]);
             exit;
@@ -259,17 +271,17 @@ try {
         }
     } elseif ($method === 'DELETE') {
         $targetDate = DateTimeUtils::getTargetDate();
-        
+
         // 編集可能かチェック
         if (!OrderDeadlineUtils::isOrderEditable($targetDate)) {
             http_response_code(403);
             echo json_encode([
-                'success' => false, 
+                'success' => false,
                 'message' => '注文の変更締め切り時間を過ぎています。'
             ]);
             exit;
         }
-        
+
         // 変更回数チェック
         if (!checkChangeLimit($db, $user_id)) {
             echo json_encode(['success' => false, 'message' => '本日の変更可能回数（2回）を超えています。']);

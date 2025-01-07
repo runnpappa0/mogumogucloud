@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../db.php';
 require_once __DIR__ . '/holiday_checker.php';
+require_once __DIR__ . '/../common/DateTimeUtils.php';
+
+use MoguMogu\Common\DateTimeUtils;
 
 // テスト用の日付設定機能
 function setTestDate($date)
@@ -11,13 +14,17 @@ function setTestDate($date)
 try {
     // 現在時刻の取得
     $now = new DateTime();
-    $today_weekday = $now->format('w');
-    $today_date = $now->format('Y-m-d');
-
+    $today_weekday = (int)$now->format('w');
     error_log("注文作成処理開始: " . $now->format('Y-m-d H:i:s'));
 
+    // 土日の場合は処理をスキップ
+    if ($today_weekday === 6 || $today_weekday === 0) {
+        error_log("土日のため処理をスキップします");
+        exit;
+    }
+
     // 金曜日の場合は翌週月曜日を設定
-    if ($today_weekday === '5') { // 金曜日
+    if ($today_weekday === 5) { // 金曜日
         $target_date = isset($argv[1])
             ? setTestDate($argv[1])
             : date('Y-m-d', strtotime('next monday'));
@@ -32,12 +39,6 @@ try {
     $target_weekday = ['日', '月', '火', '水', '木', '金', '土'][date('w', strtotime($target_date))];
     error_log("対象日の曜日: {$target_weekday}");
 
-    // 土日判定（日本語の曜日で判定）
-    if ($target_weekday === '日' || $target_weekday === '土') {
-        error_log("土日のため処理をスキップします: {$target_date}");
-        exit;
-    }
-
     // 祝日判定
     $is_holiday = HolidayChecker::isHoliday($target_date);
     error_log("祝日判定結果: " . ($is_holiday ? "祝日" : "平日"));
@@ -50,9 +51,9 @@ try {
         error_log("トランザクション開始");
 
         // 注文変更履歴をクリア
-        $clear_logs_query = "DELETE FROM order_change_logs";
+        $clear_logs_query = "DELETE FROM order_change_logs WHERE DATE(change_time) < :target_date";
         $clear_logs_stmt = $db->prepare($clear_logs_query);
-        $clear_logs_stmt->execute();
+        $clear_logs_stmt->execute([':target_date' => $target_date]);
         $cleared_logs_count = $clear_logs_stmt->rowCount();
         error_log("注文変更履歴をクリア: {$cleared_logs_count}件");
 
@@ -96,7 +97,6 @@ try {
         // トランザクションのコミット
         $db->commit();
         error_log("トランザクションコミット完了");
-
     } catch (Exception $e) {
         // エラーが発生した場合はロールバック
         $db->rollBack();

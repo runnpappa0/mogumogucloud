@@ -40,14 +40,22 @@ try {
     $db = getDbConnection();
 
     if ($method === 'GET') {
-        // 対象日付を取得（15:00以降は翌日の注文を表示）
-        $targetDate = DateTimeUtils::getTargetDate();
+        // 現在の日時を取得
+        $now = new DateTime();
+        $currentWeekday = (int)$now->format('w');
+        $currentHour = (int)$now->format('H');
 
-        if ($action === 'fetch_order_counts') {
-            // 対象日付を取得（金曜日15:00以降は翌週月曜日）
+        // 月曜日の15:00より前の場合は当日の注文を表示
+        if ($currentWeekday === 1 && $currentHour < 15) {
+            $targetDate = date('Y-m-d'); // 当日
+            $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
+        } else {
+            // その他の場合は通常通りgetTargetDate()を使用
             $targetDate = DateTimeUtils::getTargetDate();
             $formattedDate = DateTimeUtils::formatTargetDate($targetDate);
+        }
 
+        if ($action === 'fetch_order_counts') {
             // 配達先別の必要発注数を取得
             $query = "
                 SELECT 
@@ -102,7 +110,7 @@ try {
                 ]);
             }
         } elseif ($action === 'fetch_orders') {
-            // 注文内訳を取得（日付を動的に設定）
+            // 注文内訳を取得
             $query = "
                 SELECT 
                     bo.id AS order_id,
@@ -135,7 +143,7 @@ try {
                 'success' => true,
                 'orders' => $orders,
                 'target_date' => $targetDate,
-                'formatted_date' => DateTimeUtils::formatTargetDate($targetDate)
+                'formatted_date' => $formattedDate
             ]);
         } elseif ($action === 'fetch_users') {
             // ユーザーリストを取得

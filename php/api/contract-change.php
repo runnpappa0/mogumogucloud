@@ -17,6 +17,20 @@ try {
     $db = getDbConnection();
 
     if ($method === 'GET') {
+        if (isset($_GET['action']) && $_GET['action'] === 'current_contract') {
+            // 現在の契約内容を取得
+            $query = "SELECT weekdays, rice_amount FROM contract_details WHERE user_id = :user_id";
+            $stmt = $db->prepare($query);
+            $stmt->execute([':user_id' => $user_id]);
+            $contract = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+            echo json_encode([
+                'success' => true, 
+                'contract' => $contract ?: null
+            ]);
+            exit;
+        }
+        
         // 履歴を取得
         $query = "SELECT * FROM contract_change_requests WHERE user_id = :user_id ORDER BY created_at DESC";
         $stmt = $db->prepare($query);
